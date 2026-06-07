@@ -1,0 +1,52 @@
+# 图片截图
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# Netlify 配置（已废弃）
+netlify.toml
+deploy.sh
+.netlify/
+
+# Playwright 临时文件
+.playwright-cli/
+
+# YAML 测试/调试文件
+add-formula.yaml
+after-save.yaml
+compose.yaml
+edit.yaml
+final.yaml
+initial.yaml
+modal.yaml
+search-result.yaml
+search-result2.yaml
+search.yaml
+smart-result.yaml
+smart.yaml
+smart2.yaml
+smart3.yaml
+smart4.yaml
+smart5.yaml
+smart6.yaml
+smart7.yaml
+test.yaml
+zhipu-models.yaml
+
+# Supabase 迁移文件（不应公开）
+supabase-migration.sql
+
+# 辅助预览页面
+preview-formulas.html
+preview-thesaurus.html
+
+# OS 文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.codebuddy/
+.vscode/
+.idea/

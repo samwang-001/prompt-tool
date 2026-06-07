@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 强制 HTTPS（解决"不安全"标记）-->
+    <script>
+        if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.')) {
+            window.location.href = window.location.href.replace('http:', 'https:');
+        }
+    </script>
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <title>绘画提示词组合工具</title>
+    <!-- 预加载关键外部资源，减少首次加载等待 -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://aishmynicfrueempsbun.supabase.co">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>绘画提示词组合工具</h1>
+                <span id="cloudStatus" class="cloud-status" title="云端同步状态">☁️ 连接中...</span>
+            </div>
+            <div class="nav-tabs" id="navTabs">
+                <button class="nav-tab active" data-view="compose" onclick="switchView('compose')">词汇组合</button>
+                <button class="nav-tab" data-view="image-prompt" onclick="switchView('image-prompt')">图片反推</button>
+            </div>
+            <div class="header-actions">
+                <!-- 未登录时显示登录按钮 -->
+                <button id="loginBtn" class="btn btn-primary" onclick="openAuthModal()" style="display:none;">登录 / 注册</button>
+                <!-- 已登录时显示用户徽章 -->
+                <div id="userBadge" class="user-badge" style="display:none; position: relative;" onclick="toggleUserMenu()">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <span class="user-name" id="userName">用户</span>
+                    <span id="adminTag" class="admin-tag" style="display:none;">管理员</span>
+                    <span id="viewingBadge" class="viewing-badge" style="display:none;">▶ 查看: <span id="viewingUserName"></span></span>
+                    <span style="font-size:0.7rem;">▼</span>
+                    <div id="userMenu" class="user-menu">
+                        <button class="user-menu-item" id="switchToSelfBtn" style="display:none;" onclick="event.stopPropagation(); switchToSelf();">🔄 切换回自己</button>
+                        <button class="user-menu-item" id="adminPanelBtn" style="display:none;" onclick="event.stopPropagation(); openAdminPanel();">👥 管理用户</button>
+                        <button class="user-menu-item logout" onclick="event.stopPropagation(); doLogout();">退出登录</button>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+                <button class="btn btn-secondary" onclick="importData()">导入数据</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 认证弹窗 -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-card" style="position: relative;">
+            <h2 id="authTitle">登录</h2>
+            <p class="auth-sub" id="authSub">登录后你的公式和词库将云端同步</p>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')">登录</button>
+                <button class="auth-tab" onclick="switchAuthTab('register')">注册</button>
+            </div>
+            <div class="auth-field">
+                <label>邮箱</label>
+                <input type="email" id="authEmail" placeholder="your@email.com" autocomplete="email">
+            </div>
+            <div class="auth-field">
+                <label>密码</label>
+                <input type="password" id="authPassword" placeholder="至少6位" autocomplete="current-password">
+            </div>
+            <div class="auth-field" id="authDisplayNameField" style="display:none;">
+                <label>显示名称（可选）</label>
+                <input type="text" id="authDisplayName" placeholder="你的昵称">
+            </div>
+            <button class="auth-btn auth-btn-primary" id="authSubmitBtn" onclick="doAuth()">登录</button>
+            <div class="auth-error" id="authError"></div>
+            <button class="auth-close" onclick="closeAuthModal()" style="position: absolute; top: 1rem; right: 1rem;">×</button>
+        </div>
+    </div>
+
+    <!-- 管理员面板 -->
+    <div id="adminPanelOverlay" class="admin-panel-overlay">
+        <div class="admin-panel" style="position: relative;">
+            <h3>👥 管理所有用户</h3>
+            <p class="admin-sub">作为管理员，你可以查看和编辑任何用户的数据。选择用户后，下方显示该用户的公式和词库。</p>
+            <div class="admin-user-list" id="adminUserList">
+                <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">加载中...</p>
+            </div>
+            <button class="admin-close-btn" onclick="closeAdminPanel()" style="position: absolute; top: 0.75rem; right: 0.75rem;">×</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- ==================== 视图：词汇组合 ==================== -->
+        <div class="view-container active" id="viewCompose">
+        <div class="layout-columns">
+            <!-- ==================== 左侧：词库 + 尺寸 + 标题排版 ==================== -->
+            <div class="layout-left">
+                <!-- 词库管理 -->
+                <div class="panel thesaurus-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">词库管理</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div id="categoryList" class="category-list"></div>
+                    </div>
+                </div>
+
+                <!-- 尺寸管理 -->
+                <div class="panel size-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">尺寸管理</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="size-tabs" id="sizeTabs"></div>
+                        <div class="size-grid" id="sizeGrid"></div>
+                        <div class="size-custom-wrap">
+                            <input type="number" id="customWidth" class="size-custom-input" placeholder="宽度" min="1">
+                            <span class="size-custom-sep">×</span>
+                            <input type="number" id="customHeight" class="size-custom-input" placeholder="高度" min="1">
+                            <button id="customSizeBtn" class="size-custom-btn" onclick="toggleCustomSize()">使用</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 标题排版 -->
+                <div class="panel title-layout-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">标题排版</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="title-layout-section-label">排版风格</div>
+                        <div id="titleLayoutGrid" class="title-layout-grid"></div>
+                        <div class="title-layout-section-label">细节配置</div>
+                        <div id="titleLayoutOptions" class="title-layout-options"></div>
+                        <div id="titleLayoutOptions2" class="title-layout-options" style="margin-top:0.35rem;"></div>
+                        <div class="title-layout-toggle">
+                            <input type="checkbox" id="titleLayoutEnabled" onchange="toggleTitleLayout()" checked>
+                            <label for="titleLayoutEnabled">在提示词中包含排版指令</label>
+                        </div>
+                        <div id="titleLayoutPreview" class="title-layout-preview"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== 右侧：公式 + 结果 + 优化 + 链接 + 历史 ==================== -->
+            <div class="layout-right">
+                <!-- 公式管理：默认收起 -->
+                <div class="panel formula-panel collapsed" id="formulaPanel">
+                    <div class="panel-header" onclick="toggleFormulaPanel()">
+                        <h2 class="panel-title">公式管理</h2>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openVersionHistory()" title="查看公式版本记录">
+                                版本记录
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openFormulaModal()">
+                                + 添加公式
+                            </button>
+                            <span class="collapse-indicator">▼</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div id="formulaList" class="form-list"></div>
+                    </div>
+                </div>
+
+                <!-- 结果输出 -->
+                <div class="panel result-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">结果输出</h2>
+                        <select id="formulaSelect" class="formula-select compact" onchange="onFormulaChange()">
+                            <option value="">-- 选择公式 --</option>
+                        </select>
+                    </div>
+                    <div class="panel-body">
+                        <textarea id="resultTextarea" class="result-textarea" placeholder="选择公式后，在左侧词库中选词即可自动生成广告设计提示词..."></textarea>
+                        <div class="result-actions">
+                            <button class="btn btn-primary" onclick="copyResult()">复制到剪贴板</button>
+                            <button class="btn btn-optimize-feed" onclick="feedToOptimization()">填入优化中</button>
+                            <button class="btn btn-secondary" onclick="saveToHistory()">保存到历史</button>
+                            <button class="btn btn-secondary" onclick="clearSelections()">清空选择</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模型提示词优化 -->
+                <div class="panel model-opt-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">模型提示词优化</h2>
+                    </div>
+                    <div class="panel-body">
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                            点击上方「填入优化中」按钮，将生成的提示词送入优化管道，一键为所有模型生成定向优化结果。
+                        </p>
+                        <div id="modelOptStatus"></div>
+                        <div class="model-tabs" id="modelTabs"></div>
+                        <div id="modelResultArea">
+                            <div class="model-empty">
+                                <p>请先生成提示词，然后点击「填入优化中」查看各模型优化结果</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模型官方平台 -->
+                <div class="model-links">
+                    <div class="model-links-title">
+                        <span>模型官方平台</span>
+                    </div>
+                    <div class="model-links-grid">
+                        <a href="https://wanxiang.aliyun.com/" target="_blank" rel="noopener" class="model-link-btn wanxiang" title="阿里 · 通义万相">
+                            万相AI
+                        </a>
+                        <a href="https://jimeng.jianying.com/ai-tool/home" target="_blank" rel="noopener" class="model-link-btn seedream" title="字节 · 即梦 Seedream">
+                            即梦AI
+                        </a>
+                        <a href="https://www.redoon.cn/redoonlogin" target="_blank" rel="noopener" class="model-link-btn lingdong" title="灵动AI · 创意营销影像生成">
+                            灵动AI
+                        </a>
+                        <a href="https://tongyi.aliyun.com/" target="_blank" rel="noopener" class="model-link-btn qwen" title="阿里 · 通义千问">
+                            千问AI
+                        </a>
+                        <a href="https://zimage.design/zh/" target="_blank" rel="noopener" class="model-link-btn zimage" title="阿里开源 · Z Image Turbo">
+                            Z Image
+                        </a>
+                        <a href="https://www.gaoding.art/" target="_blank" rel="noopener" class="model-link-btn gaoding" title="稿定AI · 智能设计">
+                            稿定AI
+                        </a>
+                        <a href="https://www.doubao.com/chat/" target="_blank" rel="noopener" class="model-link-btn doubao" title="豆包AI · 字节跳动智能助手">
+                            豆包AI
+                        </a>
+                        <a href="https://www.dola.com/chat" target="_blank" rel="noopener" class="model-link-btn dola" title="Dola AI · 智能设计助手">
+                            Dola AI
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 历史记录 -->
+                <div class="history-toggle" id="historyToggle" onclick="toggleHistory()">
+                    <div class="history-toggle-content">
+                        <span>历史记录</span>
+                        <span class="badge" id="historyCount">0</span>
+                    </div>
+                    <span class="history-toggle-icon">▼</span>
+                </div>
+                <div class="history-content" id="historyContent">
+                    <div id="historyList" class="history-list"></div>
+                </div>
+            </div>
+        </div>
+        </div><!-- /viewCompose -->
+
+        <!-- ==================== 视图：图片反推 ==================== -->
+        <div class="view-container" id="viewImagePrompt">
+            <div class="image-prompt-layout" id="imagePromptLayout">
+                <!-- 动态渲染，由 renderImagePromptView() 生成 -->
+            </div>
+        </div><!-- /viewImagePrompt -->
+    </main>
+
+    <!-- Formula Modal -->
+    <div class="modal-overlay" id="formulaModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="formulaModalTitle">添加公式</h3>
+                <div class="modal-close" onclick="closeFormulaModal()">✕</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">公式名称</label>
+                    <input type="text" id="formulaName" class="form-input" placeholder="例如：角色设定公式">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">模板内容</label>
+                    <textarea id="formulaTemplate" class="form-textarea" placeholder="你是{{角色}}，擅长{{风格}}风格的创作"></textarea>
+                    <div class="form-hint">
+                        使用 <code>{{分类名:字段名}}</code> 语法定义变量，例如 <code>{{角色:name}}</code>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeFormulaModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveFormula()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Word Modal -->
+    <div class="modal-overlay" id="addWordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">添加词汇</h3>
+                <div class="modal-close" onclick="closeAddWordModal()">✕</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <select id="wordCategory" class="formula-select"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">词汇名称</label>
+                    <input type="text" id="newWord" class="form-input" placeholder="输入词汇名称，如：水果">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <span style="display:flex;align-items:center;gap:0.35rem;">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:rgba(99,102,241,0.15);color:#a5b4fc;font-size:0.65rem;">⊞</span>
+                            子词汇（可选）
+                        </span>
+                        <span style="font-weight:400;font-size:0.7rem;color:#64748b;margin-top:0.15rem;">细化分类，如「水果」下可设香蕉、葡萄、苹果等子商品，方便按品类展开选择</span>
+                    </label>
+                    <textarea id="wordChildren" class="form-textarea" placeholder="每行一个子词汇，或用逗号、顿号分隔&#10;例如：&#10;香蕉&#10;葡萄&#10;苹果" rows="3"></textarea>
+                </div>
+                <div class="form-divider">
+                    <span>或 批量导入</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">按标题批量添加</label>
+                    <textarea id="batchWords" class="form-textarea" placeholder="每行一个词汇，或用逗号、顿号、竖线分隔，支持直接粘贴标题文本自动拆分&#10;例如：&#10;新品尝鲜、限时特惠、爆款返场&#10;或&#10;明星同款 | 人手必备 | 品质之选" rows="5"></textarea>
+                    <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center;">
+                        <span class="form-label" style="margin-bottom: 0; font-size: 0.75rem;">分隔符：</span>
+                        <label class="form-label" style="margin-bottom: 0; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="radio" name="batchSep" value="auto" checked onchange="updateBatchHint()"> 自动识别
+                        </label>
+                        <label class="form-label" style="margin-bottom: 0; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="radio" name="batchSep" value="comma" onchange="updateBatchHint()"> 逗号/顿号
+                        </label>
+                        <label class="form-label" style="margin-bottom: 0; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="radio" name="batchSep" value="pipe" onchange="updateBatchHint()"> 竖线
+                        </label>
+                        <label class="form-label" style="margin-bottom: 0; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="radio" name="batchSep" value="line" onchange="updateBatchHint()"> 换行
+                        </label>
+                    </div>
+                    <div id="batchHint" style="margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-secondary);"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddWordModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveWord()">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Search Modal -->
+    <div class="modal-overlay smart-search-modal" id="smartSearchModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="smartSearchTitle">智能推荐</h3>
+                <div class="modal-close" onclick="closeSmartSearchModal()">✕</div>
+            </div>
+            <div class="modal-body smart-search-body">
+                <!-- 搜索栏 -->
+                <div class="smart-search-input-row">
+                    <input type="text" id="smartSearchKeyword" class="form-input" placeholder="输入分类名或关键词...">
+                    <button class="btn btn-primary btn-sm" onclick="doSmartSearch()">🔍 推荐</button>
+                </div>
+
+                <!-- 来源信息栏：显示推荐引擎状态 + 快捷操作 -->
+                <div class="smart-search-info-bar" id="smartSearchInfoBar" style="display:none;">
+                    <div class="smart-search-source" id="smartSearchSource">
+                        <span class="source-dot"></span>
+                        <span class="source-text">正在分析...</span>
+                    </div>
+                    <div class="smart-search-quick-actions">
+                        <button class="btn btn-link btn-xs" onclick="toggleAllSmartWords(true)" title="全选当前页">全选本页</button>
+                        <button class="btn btn-link btn-xs" onclick="toggleAllSmartWords(false)" title="清空选择">清空</button>
+                        <a href="javascript:void(0)" onclick="toggleAIConfig()" class="ai-settings-link" title="AI 推荐设置">⚙️</a>
+                    </div>
+                </div>
+
+                <!-- AI 配置面板（可折叠） -->
+                <div class="smart-search-ai-config" id="smartSearchAIConfig" style="display:none;">
+                    <div class="ai-config-header">
+                        <span class="ai-config-title">🤖 AI 推荐引擎</span>
+                        <select id="aiProviderSelect" onchange="handleAIProviderChange()">
+                            <option value="groq">Groq (免费)</option>
+                            <option value="none">关闭 AI</option>
+                        </select>
+                    </div>
+                    <div id="aiGroqConfig" class="ai-config-key-row">
+                        <input type="password" id="aiApiKey" class="form-input" placeholder="输入 Groq API Key（免费注册 groq.com 获取）">
+                        <button class="btn btn-primary btn-sm" onclick="saveAIKey()">保存</button>
+                    </div>
+                    <div id="aiStatusHint" class="ai-status-hint">
+                        <a href="https://console.groq.com/keys" target="_blank">获取免费 API Key →</a> 
+                        不配置则使用内置词库推荐
+                    </div>
+                </div>
+
+                <!-- 推荐结果展示区 -->
+                <div id="smartSearchResults" class="smart-search-results">
+                    <div class="smart-search-placeholder">
+                        <div class="placeholder-icon">🔍</div>
+                        <div class="placeholder-title">智能词汇推荐</div>
+                        <div class="placeholder-desc">点击分类旁的「智能推荐」按钮，AI 将分析分类语义，为你精准推荐相关设计词汇</div>
+                    </div>
+                </div>
+
+                <!-- 底部操作栏 -->
+                <div class="smart-search-footer">
+                    <span class="smart-search-count">
+                        <span class="count-number" id="smartSearchCountNum">0</span>
+                        <span class="count-label" id="smartSearchCountLabel">已选</span>
+                    </span>
+                    <div class="smart-search-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="doNextBatch()" title="换一批推荐词">🔄 换一批</button>
+                        <button class="btn btn-primary btn-sm" id="smartSearchAddBtn" onclick="addSmartSearchWords()">✅ 添加选中词汇</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">导入数据</h3>
+                <div class="modal-close" onclick="closeImportModal()">✕</div>
+            </div>
+            <div class="modal-body">
+                <div class="import-section">
+                    <!-- 文件上传区域（统一入口） -->
+                    <div id="importFileSection">
+                        <div class="file-upload-zone" onclick="document.getElementById('importFileInput').click()">
+                            <div class="file-upload-text">点击选择文件或拖拽到此处</div>
+                            <div class="file-upload-hint">支持 .json / .txt / .csv 格式</div>
+                        </div>
+                        <input type="file" id="importFileInput" accept=".json,.txt,.text,.csv" style="display: none;" onchange="handleFileImport(event)">
+                        
+                        <!-- TXT/CSV 导入预览 -->
+                        <div id="importPreview" class="import-preview" style="display: none;">
+                            <div class="preview-title">导入预览：</div>
+                            <div id="previewContent"></div>
+                            <div class="preview-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="cancelImport()">取消</button>
+                                <button class="btn btn-primary btn-sm" onclick="confirmTxtImport()">确认导入</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 导入模式选择 -->
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label class="form-label">导入方式</label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="importMode" value="merge" checked>
+                                <span>合并（追加新数据，保留现有内容）</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="importMode" value="replace">
+                                <span>替换（清空后完全覆盖，用于跨设备同步）</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- CSV格式提示（仅在导入非JSON时显示） -->
+                    <div id="csvFormatHint" class="import-format-hint" style="display: none;">
+                        <div class="format-title">CSV格式示例：</div>
+                        <div class="format-example">
+                            分类名,词汇1,词汇2,词汇3<br>
+                            <span style="color: var(--accent);">主体</span>,年轻女性,年迈老人,街拍路人<br>
+                            <span style="color: var(--accent);">场景</span>,咖啡馆,海边日落,街头巷尾<br>
+                            <span style="color: var(--accent);">风格</span>,日系,韩系,复古胶片
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImportModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version History Modal -->
+    <div class="modal-overlay" id="versionHistoryModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title">公式版本记录</h3>
+                <div class="modal-close" onclick="closeVersionHistory()">✕</div>
+            </div>
+            <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                <div id="versionHistoryList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div class="empty-state" style="padding: 2rem;">
+                        <p>暂无版本记录</p>
+                        <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.5rem;">每次修改公式后会自动创建快照</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeVersionHistory()">关闭</button>
+                <button class="btn btn-secondary" onclick="createVersionSnapshot()">手动创建快照</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- 图片反推历史详情弹窗 -->
+    <div class="modal-overlay" id="imageHistoryDetailModal">
+        <div class="modal" style="max-width:700px;">
+            <div class="modal-header">
+                <div style="display:flex;align-items:center;gap:0.6rem;">
+                    <span class="modal-title">提示词详情</span>
+                    <span class="badge detail-badge"></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.6rem;">
+                    <span class="detail-date" style="font-size:0.8rem;color:var(--text-muted);"></span>
+                    <button class="modal-close" onclick="closeImageHistoryDetail()">✕</button>
+                </div>
+            </div>
+            <div class="modal-body" style="max-height:60vh;overflow-y:auto;">
+                <pre class="detail-text" style="white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:0.9rem;line-height:1.7;color:var(--text-primary);margin:0;"></pre>
+            </div>
+            <div class="modal-footer" id="historyDetailFooter">
+                <button class="btn btn-ghost btn-sm" onclick="copyImageHistoryItem(parseInt(document.getElementById('imageHistoryDetailModal').dataset.historyId))">复制全文</button>
+                <button class="btn btn-primary btn-sm" id="historyFillComposeBtn" onclick="fillImageHistoryDetail();closeImageHistoryDetail()">匹配词库</button>
+                <button class="btn btn-ghost btn-sm" onclick="closeImageHistoryDetail()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
