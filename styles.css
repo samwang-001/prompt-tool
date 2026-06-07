@@ -3091,3 +3091,597 @@
         .admin-current { font-size: 0.75rem; color: var(--success); }
         .admin-close-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none;
             color: var(--text-secondary); font-size: 1.4rem; cursor: pointer; }
+
+        /* ================================================================
+           响应式适配 - 平板端 (768px - 1100px)
+           ================================================================ */
+        @media (max-width: 1100px) and (min-width: 769px) {
+            .layout-columns {
+                grid-template-columns: 5fr 7fr;
+                gap: 1rem;
+            }
+            .header-content {
+                padding: 0 1rem;
+                gap: 0.75rem;
+            }
+            .logo h1 {
+                font-size: 1rem;
+            }
+            .nav-tab {
+                padding: 0.5rem 1.2rem;
+                font-size: 0.8rem;
+                min-width: auto;
+            }
+            .header-actions {
+                gap: 0.35rem;
+            }
+            .header-actions .btn {
+                padding: 0.45rem 0.7rem;
+                font-size: 0.75rem;
+            }
+            .model-links-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .model-link-btn {
+                font-size: 0.72rem;
+                padding: 0.45rem 0.5rem;
+            }
+            .panel-body {
+                max-height: 350px;
+            }
+            .image-prompt-layout {
+                grid-template-columns: 320px 1fr;
+            }
+        }
+
+        /* ================================================================
+           响应式适配 - 移动端 (≤768px)
+           ================================================================ */
+        @media (max-width: 768px) {
+            /* --- Header 重构 --- */
+            .header {
+                padding: 0.5rem 0;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+            .header-content {
+                flex-wrap: wrap;
+                padding: 0 0.75rem;
+                gap: 0.5rem;
+                justify-content: space-between;
+            }
+            .logo {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+            .logo h1 {
+                font-size: 0.88rem;
+                letter-spacing: 0;
+            }
+            .cloud-status {
+                font-size: 0.62rem;
+                padding: 0.1rem 0.35rem;
+            }
+
+            /* 导航 Tab 移到第二行，占满宽 */
+            .nav-tabs {
+                order: 10;
+                width: 100%;
+                flex: 1 1 100%;
+                justify-content: stretch;
+            }
+            .nav-tab {
+                flex: 1;
+                padding: 0.45rem 0.5rem;
+                font-size: 0.75rem;
+                min-width: auto;
+                text-align: center;
+            }
+            .nav-tab .nav-tab-icon {
+                display: none;
+            }
+
+            /* 操作按钮区 */
+            .header-actions {
+                flex-wrap: wrap;
+                gap: 0.3rem;
+                align-items: center;
+            }
+            .header-actions .btn {
+                padding: 0.35rem 0.55rem;
+                font-size: 0.7rem;
+                border-radius: 7px;
+                gap: 0.25rem;
+            }
+            .header-actions .btn span,
+            .header-actions .btn .btn-text {
+                display: none;
+            }
+            .user-badge {
+                padding: 0.25rem 0.45rem;
+                gap: 0.3rem;
+            }
+            .user-avatar {
+                width: 24px;
+                height: 24px;
+                font-size: 0.65rem;
+            }
+            .user-name {
+                font-size: 0.75rem;
+                max-width: 80px;
+            }
+            .admin-tag {
+                font-size: 0.6rem;
+                padding: 0.08rem 0.25rem;
+            }
+            .viewing-badge {
+                font-size: 0.65rem;
+            }
+
+            /* --- 主布局：两栏变单栏 --- */
+            .main {
+                padding: 0.75rem;
+            }
+            .layout-columns {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            .layout-left,
+            .layout-right {
+                gap: 0.75rem;
+            }
+
+            /* --- Panel 通用 --- */
+            .panel {
+                border-radius: 10px;
+            }
+            .panel-header {
+                padding: 0.75rem 0.85rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .panel-title {
+                font-size: 0.85rem;
+            }
+            .panel-body {
+                padding: 0.75rem 0.85rem;
+                max-height: 300px;
+            }
+
+            /* --- 词库 --- */
+            .category-item {
+                padding: 0.6rem 0.75rem;
+            }
+            .category-name {
+                font-size: 0.78rem;
+            }
+            .word-tag {
+                font-size: 0.7rem;
+                padding: 0.25rem 0.5rem;
+            }
+            .word-tag.word-parent {
+                font-size: 0.7rem;
+                padding: 0.25rem 0.35rem 0.25rem 0.5rem;
+            }
+            .word-tag.word-child {
+                font-size: 0.65rem;
+                padding: 0.18rem 0.4rem;
+            }
+            .word-children-panel {
+                margin: 0.1rem 0 0.1rem 0.3rem;
+                padding: 0.3rem 0.4rem;
+                width: calc(100% - 0.3rem);
+            }
+
+            /* --- 尺寸管理 --- */
+            .size-tabs {
+                gap: 0.25rem;
+            }
+            .size-tab {
+                padding: 0.3rem 0.45rem;
+                font-size: 0.7rem;
+            }
+            .size-btn {
+                padding: 0.35rem 0.5rem;
+                font-size: 0.7rem;
+            }
+            .size-custom-wrap {
+                flex-wrap: wrap;
+                gap: 0.3rem;
+            }
+            .size-custom-input {
+                font-size: 0.72rem;
+                padding: 0.3rem 0.4rem;
+            }
+            .size-custom-btn {
+                font-size: 0.7rem;
+                padding: 0.3rem 0.5rem;
+            }
+
+            /* --- 标题排版 --- */
+            .title-layout-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.35rem;
+            }
+            .title-layout-preset {
+                padding: 0.45rem 0.3rem;
+                font-size: 0.68rem;
+            }
+            .title-layout-preset .preset-label {
+                font-size: 0.7rem;
+            }
+            .title-layout-options {
+                flex-direction: column;
+                gap: 0.35rem;
+            }
+            .title-layout-row {
+                min-width: auto;
+            }
+
+            /* --- 公式管理 --- */
+            .form-item {
+                padding: 0.75rem;
+            }
+            .form-item-name {
+                font-size: 0.85rem;
+            }
+            .form-item-template {
+                font-size: 0.72rem;
+            }
+
+            /* --- 结果输出 --- */
+            .result-textarea {
+                min-height: 100px;
+                font-size: 0.78rem;
+                padding: 0.75rem;
+            }
+            .result-actions {
+                flex-wrap: wrap;
+                gap: 0.35rem;
+            }
+            .result-actions .btn {
+                flex: 1 1 auto;
+                font-size: 0.72rem;
+                padding: 0.4rem 0.6rem;
+                justify-content: center;
+            }
+            .formula-select.compact {
+                font-size: 0.75rem;
+                padding: 0.35rem 0.55rem;
+                min-width: 120px;
+            }
+
+            /* --- 模型优化 --- */
+            .model-tabs {
+                gap: 0.3rem;
+            }
+            .model-tab {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.72rem;
+            }
+            .model-result-textarea {
+                min-height: 80px;
+                font-size: 0.78rem;
+            }
+
+            /* --- 模型链接 --- */
+            .model-links {
+                padding: 0.75rem 0.85rem;
+            }
+            .model-links-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.35rem;
+            }
+            .model-link-btn {
+                font-size: 0.7rem;
+                padding: 0.45rem 0.5rem;
+                border-radius: 8px;
+            }
+
+            /* --- 历史记录 --- */
+            .history-toggle {
+                padding: 0.75rem 0.85rem;
+            }
+            .history-content {
+                padding: 0.75rem 0.85rem;
+            }
+            .history-list {
+                max-height: 160px;
+            }
+            .history-item {
+                padding: 0.6rem;
+            }
+            .history-item-text {
+                font-size: 0.75rem;
+            }
+
+            /* --- 图片反推视图 --- */
+            .image-prompt-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+                gap: 0.75rem;
+            }
+            .image-prompt-layout .right-panel {
+                height: auto;
+                max-height: 400px;
+            }
+            .image-prompt-layout .left-panel {
+                height: auto;
+            }
+            .image-prompt-layout .upload-zone {
+                min-height: 100px;
+                padding: 1rem 0.75rem;
+            }
+            .image-prompt-layout .preview-container img {
+                max-height: 150px;
+            }
+            .image-prompt-layout .history-thumb {
+                width: 60px;
+                height: 60px;
+            }
+            .image-prompt-layout .history-desc {
+                font-size: 0.72rem;
+                -webkit-line-clamp: 2;
+            }
+            .image-prompt-layout .history-meta {
+                gap: 0.4rem;
+            }
+            .image-prompt-layout .history-date {
+                font-size: 0.65rem;
+            }
+
+            /* --- 弹窗 --- */
+            .modal {
+                border-radius: 12px;
+                max-width: 95vw;
+                max-height: 85vh;
+            }
+            .modal-header {
+                padding: 0.85rem 1rem;
+            }
+            .modal-title {
+                font-size: 0.95rem;
+            }
+            .modal-body {
+                padding: 0.85rem 1rem;
+            }
+            .modal-footer {
+                padding: 0.75rem 1rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .modal-footer .btn {
+                flex: 1 1 auto;
+                font-size: 0.8rem;
+            }
+
+            /* 认证弹窗 */
+            .auth-card {
+                padding: 1.25rem;
+                width: 95vw;
+            }
+            .auth-card h2 {
+                font-size: 1.15rem;
+            }
+            .auth-field input {
+                padding: 0.6rem 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            /* 管理员面板 */
+            .admin-panel {
+                padding: 1rem;
+                max-height: 85vh;
+            }
+            .admin-user-item {
+                padding: 0.55rem 0.65rem;
+            }
+            .admin-user-email {
+                font-size: 0.78rem;
+            }
+
+            /* 智能推荐弹窗 */
+            .smart-search-modal .modal {
+                max-width: 95vw;
+            }
+            .smart-search-input-row {
+                flex-direction: column;
+                gap: 0.35rem;
+            }
+            .smart-search-input-row .btn {
+                width: 100%;
+            }
+            .smart-search-results {
+                max-height: 220px;
+            }
+            .smart-word-chip {
+                font-size: 0.7rem;
+                padding: 0.3rem 0.65rem;
+            }
+            .smart-search-footer {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .smart-search-actions {
+                flex-wrap: wrap;
+                gap: 0.35rem;
+            }
+            .smart-search-actions .btn {
+                flex: 1 1 auto;
+                font-size: 0.72rem;
+            }
+
+            /* 版本记录弹窗 */
+            #versionHistoryModal .modal {
+                max-width: 95vw;
+            }
+
+            /* Toast */
+            .toast {
+                min-width: auto;
+                max-width: 85vw;
+                padding: 0.6rem 0.85rem;
+                font-size: 0.82rem;
+            }
+
+            /* --- 公式管理面板头部按钮 --- */
+            .panel.formula-panel .panel-header {
+                flex-wrap: wrap;
+            }
+            .panel.formula-panel .panel-header > div:last-child {
+                flex-wrap: wrap;
+                gap: 0.3rem;
+            }
+
+            /* --- 隐藏非核心元素 --- */
+            .btn-optimize-feed {
+                font-size: 0.72rem;
+            }
+            .cloud-status {
+                display: none;
+            }
+        }
+
+        /* ================================================================
+           响应式适配 - 小屏手机 (≤480px)
+           ================================================================ */
+        @media (max-width: 480px) {
+            .header-content {
+                padding: 0 0.5rem;
+                gap: 0.35rem;
+            }
+            .logo h1 {
+                font-size: 0.78rem;
+            }
+            .nav-tab {
+                padding: 0.4rem 0.35rem;
+                font-size: 0.68rem;
+                border-bottom-width: 2px;
+            }
+            .header-actions .btn {
+                padding: 0.3rem 0.45rem;
+                font-size: 0.65rem;
+                border-radius: 6px;
+            }
+            .user-name {
+                max-width: 50px;
+            }
+            .main {
+                padding: 0.5rem;
+            }
+            .layout-columns {
+                gap: 0.5rem;
+            }
+            .layout-left,
+            .layout-right {
+                gap: 0.5rem;
+            }
+            .panel-header {
+                padding: 0.6rem 0.7rem;
+            }
+            .panel-title {
+                font-size: 0.78rem;
+            }
+            .panel-body {
+                padding: 0.6rem 0.7rem;
+                max-height: 250px;
+            }
+            .word-tag {
+                font-size: 0.66rem;
+                padding: 0.2rem 0.4rem;
+                border-radius: 5px;
+            }
+            .size-tabs {
+                flex-wrap: wrap;
+                gap: 0.2rem;
+            }
+            .size-tab {
+                padding: 0.25rem 0.35rem;
+                font-size: 0.65rem;
+                border-radius: 5px;
+            }
+            .size-btn {
+                padding: 0.3rem 0.4rem;
+                font-size: 0.65rem;
+                border-radius: 6px;
+            }
+            .title-layout-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .title-layout-preset {
+                padding: 0.35rem 0.25rem;
+            }
+            .title-layout-preset .preset-label {
+                font-size: 0.65rem;
+            }
+            .model-links-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.3rem;
+            }
+            .model-link-btn {
+                font-size: 0.65rem;
+                padding: 0.35rem 0.4rem;
+                border-radius: 7px;
+            }
+            .result-textarea {
+                min-height: 80px;
+                font-size: 0.72rem;
+            }
+            .result-actions .btn {
+                font-size: 0.68rem;
+                padding: 0.35rem 0.5rem;
+            }
+            .form-item {
+                padding: 0.6rem;
+            }
+            .form-item-template {
+                font-size: 0.68rem;
+                padding: 0.4rem 0.55rem;
+            }
+            .image-prompt-layout .history-thumb {
+                width: 48px;
+                height: 48px;
+            }
+            .image-prompt-layout .history-desc {
+                font-size: 0.68rem;
+                -webkit-line-clamp: 2;
+            }
+            .image-prompt-layout .history-item {
+                padding: 0.6rem 0.85rem;
+                gap: 0.6rem;
+            }
+            .modal {
+                max-width: 98vw;
+                border-radius: 10px;
+            }
+            .modal-title {
+                font-size: 0.88rem;
+            }
+            .auth-card {
+                padding: 1rem;
+            }
+            .auth-card h2 {
+                font-size: 1.05rem;
+            }
+            .auth-field input {
+                padding: 0.5rem 0.65rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* ================================================================
+           响应式适配 - 大屏 (>1600px)
+           ================================================================ */
+        @media (min-width: 1601px) {
+            .main {
+                max-width: 1800px;
+                padding: 2rem;
+            }
+            .layout-columns {
+                gap: 2rem;
+            }
+            .model-links-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
