@@ -3094,14 +3094,15 @@
         .admin-user-list { max-height: 45vh; overflow-y: auto; }
         .admin-user-item {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0.7rem 0.85rem; border-radius: 8px; cursor: pointer;
+            padding: 0.7rem 0.85rem; border-radius: 8px;
             border: 1px solid transparent; transition: all 0.15s; margin-bottom: 0.35rem;
             background: rgba(15,23,42,0.3);
         }
+        .admin-user-left { cursor: pointer; flex: 1; display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+        .admin-user-left:hover ~ .admin-user-actions,
         .admin-user-item:hover { background: var(--surface-hover); border-color: var(--border); }
         .admin-user-item.selected { border-color: var(--primary); background: rgba(79,70,229,0.08); }
         .admin-user-item.blocked { opacity: 0.5; }
-        .admin-user-left { display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1; }
         .admin-user-info { min-width: 0; }
         .admin-user-name { font-size: 0.85rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; }
         .admin-user-email { font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

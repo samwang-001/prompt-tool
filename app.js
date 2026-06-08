@@ -449,7 +449,8 @@
             document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
             const tabBtn = document.querySelector(`.admin-tab[onclick*="${_currentAdminTab}"]`);
             if (tabBtn) tabBtn.classList.add('active');
-            const tabContent = document.getElementById('adminTab' + _currentAdminTab.charAt(0).toUpperCase() + _currentAdminTab.slice(1));
+            const tabContentId = _currentAdminTab === 'apikeys' ? 'adminTabApiKeys' : ('adminTab' + _currentAdminTab.charAt(0).toUpperCase() + _currentAdminTab.slice(1));
+            const tabContent = document.getElementById(tabContentId);
             if (tabContent) tabContent.classList.add('active');
         }
 
@@ -538,8 +539,8 @@
                 }
 
                 return `
-                    <div class="admin-user-item${isViewing ? ' selected' : ''}${isBlocked ? ' blocked' : ''}" onclick="switchToUser('${u.user_id}', event)">
-                        <div class="admin-user-left">
+                    <div class="admin-user-item${isViewing ? ' selected' : ''}${isBlocked ? ' blocked' : ''}">
+                        <div class="admin-user-left" onclick="switchToUser('${u.user_id}', event)">
                             <div class="user-avatar" style="width:32px;height:32px;font-size:0.8rem;flex-shrink:0;">${(u.email || 'U')[0].toUpperCase()}</div>
                             <div class="admin-user-info">
                                 <div class="admin-user-name">
@@ -642,14 +643,14 @@
             });
         }
 
-        // 添加白名单用户
+        // 添加白名单用户（用户名+密码，邮箱可选后续绑定）
         async function addWhitelistUser() {
-            const email = document.getElementById('whitelistEmail').value.trim();
+            const username = document.getElementById('whitelistUsername').value.trim();
             const password = document.getElementById('whitelistPassword').value;
             const displayName = document.getElementById('whitelistDisplayName').value.trim();
             const errorEl = document.getElementById('whitelistError');
 
-            if (!email || !password) { errorEl.textContent = '请填写邮箱和密码'; return; }
+            if (!username || !password) { errorEl.textContent = '请填写用户名和密码'; return; }
             if (password.length < 6) { errorEl.textContent = '密码至少需要6位'; return; }
 
             errorEl.textContent = '';
@@ -657,16 +658,19 @@
             // 收集管理员当前的 API Keys
             const apiKeys = collectCurrentApiKeys();
 
+            // 使用用户名作为临时邮箱（格式：username@whitelist.local）
+            const tempEmail = username + '@whitelist.local';
+
             const result = await callManageUsers('create_whitelist_user', {
-                email,
+                email: tempEmail,
                 password,
-                display_name: displayName || email.split('@')[0],
+                display_name: displayName || username,
                 api_keys: apiKeys,
             });
 
             if (result) {
                 // 清空表单
-                document.getElementById('whitelistEmail').value = '';
+                document.getElementById('whitelistUsername').value = '';
                 document.getElementById('whitelistPassword').value = '';
                 document.getElementById('whitelistDisplayName').value = '';
                 showToast(result.message || '白名单用户已添加', 'success');
