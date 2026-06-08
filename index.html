@@ -109,10 +109,13 @@
             
             <!-- 白名单管理 -->
             <div class="admin-tab-content" id="adminTabWhitelist">
+                <div style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.75rem;">
+                    <p style="font-size:0.75rem;color:#60a5fa;margin:0;">💡 <strong>两种方式添加白名单：</strong>① 在用户列表点击【加白】将现有注册用户一键提升；② 下方手动创建新账号。</p>
+                </div>
                 <!-- 添加白名单用户表单 -->
                 <div class="whitelist-form">
-                    <h4 style="font-size:0.9rem;margin-bottom:0.75rem;color:var(--text-primary);">➕ 添加白名单用户</h4>
-                    <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.75rem;">白名单用户可直接使用你提供的账号密码登录，无需注册，并自动获得你的 API Keys。</p>
+                    <h4 style="font-size:0.9rem;margin-bottom:0.5rem;color:var(--text-primary);">➕ 手动创建白名单用户</h4>
+                    <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:0.6rem;">为新用户创建账号密码，登录后自动获得你的 API Keys。</p>
                     <div class="whitelist-field">
                         <label>邮箱</label>
                         <input type="email" id="whitelistEmail" class="form-input" placeholder="user@example.com">
@@ -125,7 +128,7 @@
                         <label>显示名称（可选）</label>
                         <input type="text" id="whitelistDisplayName" class="form-input" placeholder="用户昵称">
                     </div>
-                    <button class="btn btn-primary" onclick="addWhitelistUser()" style="width:100%;">添加白名单用户</button>
+                    <button class="btn btn-primary" onclick="addWhitelistUser()" style="width:100%;">创建白名单用户</button>
                     <div id="whitelistError" class="auth-error"></div>
                 </div>
                 <!-- 现有白名单列表 -->
@@ -137,7 +140,15 @@
             <!-- API Keys 同步 -->
             <div class="admin-tab-content" id="adminTabApiKeys">
                 <h4 style="font-size:0.9rem;margin-bottom:0.5rem;color:var(--text-primary);">🔑 管理员 API Keys</h4>
-                <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.75rem;">设置后，所有白名单用户将自动获得这些 API Keys，无需自行配置。同步后现有白名单用户也会更新。</p>
+                <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.75rem;">
+                    <p style="font-size:0.72rem;color:#34d399;margin:0 0 0.3rem 0;"><strong>使用流程：</strong></p>
+                    <ol style="font-size:0.7rem;color:var(--text-secondary);margin:0;padding-left:1.1rem;line-height:1.6;">
+                        <li>管理员在此填写各平台的 API Key（仅你自己可见）</li>
+                        <li>点击【保存并同步】→ 所有白名单用户自动获得这些 Key</li>
+                        <li>白名单用户登录后无需手动配置，直接使用</li>
+                        <li>后续修改 Key 后再次同步，所有白名单用户自动更新</li>
+                    </ol>
+                </div>
                 <div class="api-keys-admin-form">
                     <div class="whitelist-field">
                         <label>智谱 API Key</label>

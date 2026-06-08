@@ -526,15 +526,18 @@
                 let actionsHtml = '';
                 if (!isMe && !isAdminUser) {
                     if (isBlocked) {
-                        actionsHtml = `<button class="admin-btn-action" onclick="event.stopPropagation();unblockUser('${u.user_id}')" title="解除拉黑">解除</button>`;
+                        actionsHtml = `<button class="admin-btn-action" onclick="unblockUser('${u.user_id}')" title="解除拉黑">解除</button>`;
+                    } else if (isWhitelist) {
+                        actionsHtml = `<button class="admin-btn-action" onclick="removeWhitelistUser('${u.user_id}')" title="移出白名单">移出</button>`;
                     } else {
-                        actionsHtml = `<button class="admin-btn-action warn" onclick="event.stopPropagation();blockUser('${u.user_id}')" title="拉黑">拉黑</button>`;
+                        actionsHtml = `<button class="admin-btn-action" style="color:#60a5fa;border-color:rgba(96,165,250,0.3);" onclick="promoteToWhitelist('${u.user_id}','${escapeHtml(u.email || '')}')" title="添加白名单">加白</button>`;
+                        actionsHtml += `<button class="admin-btn-action warn" onclick="blockUser('${u.user_id}')" title="拉黑">拉黑</button>`;
                     }
-                    actionsHtml += `<button class="admin-btn-action danger" onclick="event.stopPropagation();deleteUser('${u.user_id}','${escapeHtml(u.email || '')}')" title="删除">删除</button>`;
+                    actionsHtml += `<button class="admin-btn-action danger" onclick="deleteUser('${u.user_id}','${escapeHtml(u.email || '')}')" title="删除">删除</button>`;
                 }
 
                 return `
-                    <div class="admin-user-item${isViewing ? ' selected' : ''}${isBlocked ? ' blocked' : ''}" onclick="switchToUser('${u.user_id}')">
+                    <div class="admin-user-item${isViewing ? ' selected' : ''}${isBlocked ? ' blocked' : ''}" onclick="switchToUser('${u.user_id}', event)">
                         <div class="admin-user-left">
                             <div class="user-avatar" style="width:32px;height:32px;font-size:0.8rem;flex-shrink:0;">${(u.email || 'U')[0].toUpperCase()}</div>
                             <div class="admin-user-info">
@@ -553,8 +556,10 @@
             }).join('');
         }
 
-        async function switchToUser(userId) {
+        async function switchToUser(userId, ev) {
             if (!isAdmin) return;
+            // 如果点击的是操作按钮区域，不执行切换（防止点击拉黑/删除/加白时关闭面板）
+            if (ev && ev.target.closest('.admin-user-actions')) return;
             // 选自己等同于切换回自己
             adminViewUserId = (userId === currentUser?.id) ? null : userId;
             closeAdminPanel();
@@ -678,6 +683,20 @@
                 showToast('已移出白名单', 'success');
                 await loadWhitelistList();
                 await loadAdminUsers();
+            }
+        }
+
+        // 将现有用户提升为白名单（不传密码，保留原密码）
+        async function promoteToWhitelist(userId, email) {
+            const displayName = _adminUsersCache.find(u => u.user_id === userId)?.display_name;
+            const result = await callManageUsers('create_whitelist_user', {
+                email,
+                display_name: displayName,
+            });
+            if (result) {
+                showToast(result.message || '已添加为白名单用户', 'success');
+                await loadAdminUsers();
+                await loadWhitelistList();
             }
         }
 

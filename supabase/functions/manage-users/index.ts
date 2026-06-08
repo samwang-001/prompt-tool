@@ -109,8 +109,7 @@ serve(async (req: Request) => {
 
       case "create_whitelist_user": {
         const { email, password, display_name, api_keys } = payload;
-        if (!email || !password) throw new Error("缺少邮箱或密码");
-        if (password.length < 6) throw new Error("密码至少需要6位");
+        if (!email) throw new Error("缺少邮箱");
 
         // 检查是否已存在
         const { data: existing } = await supabaseAdmin
@@ -122,14 +121,14 @@ serve(async (req: Request) => {
         let userId: string;
 
         if (existing) {
-          // 已存在：更新状态为 whitelist，重置密码
+          // 已存在用户：更新状态为 whitelist，有密码才重置密码
           userId = existing.user_id;
-          await supabaseAdmin.auth.admin.updateUserById(userId, {
-            password,
-            email_confirm: true,
-          });
+          const updateData: any = { email_confirm: true };
+          if (password && password.length >= 6) updateData.password = password;
+          await supabaseAdmin.auth.admin.updateUserById(userId, updateData);
         } else {
-          // 新建 auth 用户（自动确认邮箱）
+          // 新建 auth 用户必须提供密码
+          if (!password || password.length < 6) throw new Error("新用户必须提供至少6位密码");
           const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
             email,
             password,
