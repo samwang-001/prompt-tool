@@ -3,6 +3,8 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpc2hteW5pY2ZydWVlbXBzYnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDczMTksImV4cCI6MjA5NjE4MzMxOX0.tNxiKnRADMDKJaDYaFpm6gTEg_Nv8bI8Ql05SdGsST4';
         // ⚠️ 替换为你的管理员邮箱
         const ADMIN_EMAIL = 'hvho1982@163.com';
+        // 应用地址（邮箱验证回调用）
+        const APP_URL = 'https://www.prompt-tool.dedyn.io';
 
         let supabaseClient = null;
         let cloudReady = false;
@@ -44,7 +46,12 @@
                     // 监听认证状态变化
                     supabaseClient.auth.onAuthStateChange((event, session) => {
                         if (event === 'SIGNED_IN' && session) {
+                            const wasLoggedOut = !currentUser;
                             updateAuthUI(session.user);
+                            // 新登录（包括邮箱验证后首次登录）自动同步数据
+                            if (cloudReady && wasLoggedOut) {
+                                reloadCloudData();
+                            }
                         } else if (event === 'SIGNED_OUT') {
                             updateAuthUI(null);
                         }
@@ -83,6 +90,39 @@
                         // 确保清除旧的登录状态
                         updateAuthUI(null);
                     }
+                    // 处理邮箱验证回调（从验证链接跳回）
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+                        const isVerified = urlParams.get('verified') === '1';
+                        const hasEmailToken = hashParams.get('type') === 'signup' || hashParams.get('type') === 'email_change';
+                        
+                        if (isVerified || hasEmailToken) {
+                            if (session && session.user) {
+                                console.log('[Auth] ✅ 邮箱验证成功，已自动登录');
+                                showToast('邮箱验证成功！已自动登录，数据同步中...', 'success');
+                                await reloadCloudData();
+                            } else if (hasEmailToken) {
+                                // Supabase 可能刚验证完但 session 还没就绪，稍等再尝试
+                                setTimeout(async () => {
+                                    const { data: { session: s2 } } = await supabaseClient.auth.getSession();
+                                    if (s2 && s2.user) {
+                                        updateAuthUI(s2.user);
+                                        showToast('邮箱验证成功！已自动登录，数据同步中...', 'success');
+                                        await reloadCloudData();
+                                    }
+                                }, 1000);
+                            }
+                            // 清除 URL 中的验证参数
+                            if (window.history && window.history.replaceState) {
+                                const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+                                window.history.replaceState({}, '', cleanUrl);
+                            }
+                        }
+                    } catch (cbErr) {
+                        console.warn('[Auth] 验证回调处理异常:', cbErr.message);
+                    }
+
                     cloudReady = true;
                     console.log('[Supabase] ✅ 云端存储已就绪');
                     updateCloudStatus(true);
@@ -230,7 +270,7 @@
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) {
                         if (error.message.includes('Invalid login')) errorEl.textContent = '邮箱或密码错误';
-                        else if (error.message.includes('Email not confirmed')) errorEl.textContent = '请先验证邮箱';
+                        else if (error.message.includes('Email not confirmed')) errorEl.textContent = '邮箱尚未验证，请查收验证邮件（含垃圾邮件箱）并点击链接。如未收到，请重新注册';
                         else errorEl.textContent = error.message;
                     } else {
                         // 显式设置用户状态（防止 onAuthStateChange 回调延迟导致 reloadCloudData 拿不到 currentUser）
@@ -245,7 +285,10 @@
                     const { data, error } = await supabaseClient.auth.signUp({
                         email,
                         password,
-                        options: { data: { display_name: displayName || email.split('@')[0] } }
+                        options: {
+                            emailRedirectTo: APP_URL + '?verified=1',
+                            data: { display_name: displayName || email.split('@')[0] }
+                        }
                     });
                     if (error) {
                         if (error.message.includes('already registered')) errorEl.textContent = '该邮箱已注册，请直接登录';
@@ -254,9 +297,13 @@
                         if (data.user && data.user.identities && data.user.identities.length === 0) {
                             errorEl.textContent = '该邮箱已注册，请直接登录';
                         } else {
-                            // 如果开启了邮箱验证，提示用户查看邮箱
+                            const needConfirm = data.user?.email_confirmed_at === null && data.session === null;
                             errorEl.textContent = '';
-                            showToast('注册成功！请查收邮箱验证邮件。（如未开启验证，请直接登录）', 'success');
+                            if (needConfirm) {
+                                showToast('注册成功！验证邮件已发送，请检查邮箱（含垃圾邮件箱）并点击验证链接', 'success');
+                            } else {
+                                showToast('注册成功！已自动登录', 'success');
+                            }
                             switchAuthTab('login');
                             document.getElementById('authEmail').value = email;
                             document.getElementById('authPassword').value = '';
