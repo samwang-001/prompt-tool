@@ -6665,7 +6665,6 @@ ${sampleStr}
                                 <select id="groqModelSelect" onchange="switchGroqModel(this.value)" style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;background:rgba(15,23,42,0.5);color:var(--text-primary);cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%2394a3b8%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 0.75rem center;padding-right:2rem;">
                                     <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B（免费·通用视觉·128K）</option>
                                     <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 17B（免费·复杂视觉推理·128K）</option>
-                                    <option value="llava-v1.5-7b-4096-preview">LLaVA v1.5 7B（免费·轻量视觉·速度快）</option>
                                 </select>
                             </div>
                             <!-- 模型提示 -->
@@ -8103,8 +8102,7 @@ ${keywordsList}
                 },
                 'groq': {
                     'meta-llama/llama-4-scout-17b-16e-instruct': '完全免费·通用视觉·OCR·128K上下文，✅ 支持本地上传base64',
-                    'meta-llama/llama-4-maverick-17b-128e-instruct': '完全免费·复杂视觉推理·128K上下文，✅ 支持本地上传base64',
-                    'llava-v1.5-7b-4096-preview': '完全免费·轻量视觉·速度极快，✅ 支持本地上传base64'
+                    'meta-llama/llama-4-maverick-17b-128e-instruct': '完全免费·复杂视觉推理·128K上下文，✅ 支持本地上传base64'
                 }
             };
             
@@ -8270,7 +8268,7 @@ ${keywordsList}
                             'Authorization': `Bearer ${key}`
                         },
                         body: JSON.stringify({
-                            model: 'llava-v1.5-7b-4096-preview',
+                            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
                             messages: [{ role: 'user', content: 'ping' }],
                             max_tokens: 1
                         })
