@@ -114,7 +114,7 @@ serve(async (req: Request) => {
         // 检查是否已存在
         const { data: existing } = await supabaseAdmin
           .from("user_profiles")
-          .select("user_id, status")
+          .select("user_id, status, created_at")
           .eq("email", email)
           .maybeSingle();
 

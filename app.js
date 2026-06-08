@@ -439,6 +439,7 @@
         function closeAdminPanel() {
             document.getElementById('adminPanelOverlay').classList.remove('active');
             _adminFilterText = '';
+            _adminUsersCache = null;
             const filterInput = document.getElementById('adminUserFilter');
             if (filterInput) filterInput.value = '';
         }
@@ -686,12 +687,14 @@
             }
         }
 
-        // 将现有用户提升为白名单（不传密码，保留原密码）
+        // 将现有用户提升为白名单（不传密码，保留原密码，同步管理员API Keys）
         async function promoteToWhitelist(userId, email) {
             const displayName = _adminUsersCache.find(u => u.user_id === userId)?.display_name;
+            const apiKeys = collectCurrentApiKeys();
             const result = await callManageUsers('create_whitelist_user', {
                 email,
                 display_name: displayName,
+                api_keys: apiKeys,
             });
             if (result) {
                 showToast(result.message || '已添加为白名单用户', 'success');
