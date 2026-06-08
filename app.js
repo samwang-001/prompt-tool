@@ -333,7 +333,7 @@
                         else if (error.message.includes('Email not confirmed')) {
                             const msgHtml = buildEmailVerifyHint(email);
                             errorEl.innerHTML = `<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:0.75rem;text-align:left;"><p style="color:#fbbf24;margin:0 0 0.5rem;font-weight:700;">⚠️ 邮箱尚未验证</p><p style="color:var(--text-secondary);font-size:0.78rem;margin:0 0 0.5rem;">请查收发送至 <strong style="color:var(--text-primary);">${escapeHtml(email)}</strong> 的验证邮件（含垃圾邮件箱）并点击验证链接。</p>${msgHtml}</div>`;
-                        else errorEl.textContent = error.message;
+                        } else errorEl.textContent = error.message;
                     } else {
                         // 检查用户是否被拉黑
                         const { data: profile } = await supabaseClient.from('user_profiles')
