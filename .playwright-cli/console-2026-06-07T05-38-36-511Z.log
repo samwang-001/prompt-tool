@@ -1,0 +1,14 @@
+[     889ms] [LOG] [Init] 开始初始化，连接 Supabase... @ http://localhost:8765/app.js:5716
+[     890ms] [LOG] [Supabase] SDK 已检测到，创建客户端... @ http://localhost:8765/app.js:37
+[     893ms] [LOG] [Auth] 已登出 @ http://localhost:8765/app.js:158
+[     893ms] [LOG] [Supabase] ✅ 云端存储已就绪 @ http://localhost:8765/app.js:86
+[     894ms] [LOG] [Init] Supabase 初始化结果: true 用户: 未登录 @ http://localhost:8765/app.js:5718
+[     894ms] [LOG] [Auth] 已登出 @ http://localhost:8765/app.js:158
+[     894ms] [LOG] [Init] 版本升级: 首次 → v20，执行数据迁移... @ http://localhost:8765/app.js:5726
+[     894ms] [LOG] [Init] 未登录或云端不可用，使用本地数据 @ http://localhost:8765/app.js:5767
+[     912ms] [LOG] [Init] ⚠️ 使用本地存储模式，数据不会跨设备同步 @ http://localhost:8765/app.js:5817
+[     941ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8765/index.html:0
+[     941ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8765/index.html:0
+[     943ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8765/favicon.ico:0
+[    3524ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8765/index.html:0
+[    3524ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8765/index.html:0

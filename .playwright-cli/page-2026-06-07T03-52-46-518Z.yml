@@ -1,0 +1,1447 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - heading "绘画提示词组合工具" [level=1] [ref=e5]
+        - generic "云端未连接，点击重试链接云端" [ref=e6] [cursor=pointer]: 📡 本地模式
+      - generic [ref=e7]:
+        - button "📝 词汇组合" [ref=e8] [cursor=pointer]:
+          - generic [ref=e9]: 📝
+          - text: 词汇组合
+        - button "🖼️ 图片反推" [ref=e10] [cursor=pointer]:
+          - generic [ref=e11]: 🖼️
+          - text: 图片反推
+      - generic [ref=e12]:
+        - button "登录 / 注册" [ref=e13] [cursor=pointer]
+        - button "导出数据" [ref=e14] [cursor=pointer]
+        - button "导入数据" [ref=e15] [cursor=pointer]
+  - generic:
+    - generic:
+      - heading "登录" [level=2]
+      - paragraph: 登录后你的公式和词库将云端同步
+      - generic:
+        - button "登录"
+        - button "注册"
+      - generic:
+        - generic: 邮箱
+        - textbox "your@email.com"
+      - generic:
+        - generic: 密码
+        - textbox "至少6位"
+      - button "登录"
+      - button "×"
+  - generic:
+    - generic:
+      - heading "👥 管理所有用户" [level=3]
+      - paragraph: 作为管理员，你可以查看和编辑任何用户的数据。选择用户后，下方显示该用户的公式和词库。
+      - generic:
+        - paragraph: 加载中...
+      - button "×"
+  - main [ref=e16]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - heading "词库管理" [level=2] [ref=e22]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - generic [ref=e26]:
+                - generic [ref=e27]:
+                  - text: 广告背景
+                  - generic [ref=e28]: "20"
+                - generic [ref=e29]:
+                  - button "🔍 智能推荐" [ref=e30] [cursor=pointer]
+                  - button "添加词汇" [ref=e31] [cursor=pointer]
+                  - button "设为默认" [ref=e32] [cursor=pointer]
+                  - button "恢复" [ref=e33] [cursor=pointer]
+              - generic [ref=e34]:
+                - generic "点击添加/移除此词汇" [ref=e35] [cursor=pointer]:
+                  - text: 纯白极简背景
+                  - generic [ref=e36]: ✕
+                - generic "点击添加/移除此词汇" [ref=e37] [cursor=pointer]:
+                  - text: 渐变色彩背景
+                  - generic [ref=e38]: ✕
+                - generic "点击添加/移除此词汇" [ref=e39] [cursor=pointer]:
+                  - text: 大理石纹理台面
+                  - generic [ref=e40]: ✕
+                - generic "点击添加/移除此词汇" [ref=e41] [cursor=pointer]:
+                  - text: 镜面反射展台
+                  - generic [ref=e42]: ✕
+                - generic "点击添加/移除此词汇" [ref=e43] [cursor=pointer]:
+                  - text: 丝绸布料衬底
+                  - generic [ref=e44]: ✕
+                - generic "点击添加/移除此词汇" [ref=e45] [cursor=pointer]:
+                  - text: 自然光影窗台
+                  - generic [ref=e46]: ✕
+                - generic "点击添加/移除此词汇" [ref=e47] [cursor=pointer]:
+                  - text: 霓虹灯城市夜景
+                  - generic [ref=e48]: ✕
+                - generic "点击添加/移除此词汇" [ref=e49] [cursor=pointer]:
+                  - text: 水波纹动态背景
+                  - generic [ref=e50]: ✕
+                - generic "点击添加/移除此词汇" [ref=e51] [cursor=pointer]:
+                  - text: 金色奢华幕布
+                  - generic [ref=e52]: ✕
+                - generic "点击添加/移除此词汇" [ref=e53] [cursor=pointer]:
+                  - text: 粉色梦幻空间
+                  - generic [ref=e54]: ✕
+                - generic "点击添加/移除此词汇" [ref=e55] [cursor=pointer]:
+                  - text: 水泥工业风墙面
+                  - generic [ref=e56]: ✕
+                - generic "点击添加/移除此词汇" [ref=e57] [cursor=pointer]:
+                  - text: 热带植物丛林
+                  - generic [ref=e58]: ✕
+                - generic "点击添加/移除此词汇" [ref=e59] [cursor=pointer]:
+                  - text: 沙滩海岸线
+                  - generic [ref=e60]: ✕
+                - generic "点击添加/移除此词汇" [ref=e61] [cursor=pointer]:
+                  - text: 雪山冰川背景
+                  - generic [ref=e62]: ✕
+                - generic "点击添加/移除此词汇" [ref=e63] [cursor=pointer]:
+                  - text: 赛博朋克都市
+                  - generic [ref=e64]: ✕
+                - generic "点击添加/移除此词汇" [ref=e65] [cursor=pointer]:
+                  - text: 古典欧式宫殿
+                  - generic [ref=e66]: ✕
+                - generic "点击添加/移除此词汇" [ref=e67] [cursor=pointer]:
+                  - text: 日式禅意庭院
+                  - generic [ref=e68]: ✕
+                - generic "点击添加/移除此词汇" [ref=e69] [cursor=pointer]:
+                  - text: 科技感数字空间
+                  - generic [ref=e70]: ✕
+                - generic "点击添加/移除此词汇" [ref=e71] [cursor=pointer]:
+                  - text: 深色产品棚拍背景
+                  - generic [ref=e72]: ✕
+                - generic "点击添加/移除此词汇" [ref=e73] [cursor=pointer]:
+                  - text: 糖果色几何背景
+                  - generic [ref=e74]: ✕
+            - generic [ref=e75]:
+              - generic [ref=e76]:
+                - generic [ref=e77]:
+                  - text: 广告氛围
+                  - generic [ref=e78]: "20"
+                - generic [ref=e79]:
+                  - button "🔍 智能推荐" [ref=e80] [cursor=pointer]
+                  - button "添加词汇" [ref=e81] [cursor=pointer]
+                  - button "设为默认" [ref=e82] [cursor=pointer]
+                  - button "恢复" [ref=e83] [cursor=pointer]
+              - generic [ref=e84]:
+                - generic "点击添加/移除此词汇" [ref=e85] [cursor=pointer]:
+                  - text: 轻奢高级感
+                  - generic [ref=e86]: ✕
+                - generic "点击添加/移除此词汇" [ref=e87] [cursor=pointer]:
+                  - text: 清新自然感
+                  - generic [ref=e88]: ✕
+                - generic "点击添加/移除此词汇" [ref=e89] [cursor=pointer]:
+                  - text: 科技未来感
+                  - generic [ref=e90]: ✕
+                - generic "点击添加/移除此词汇" [ref=e91] [cursor=pointer]:
+                  - text: 温馨治愈感
+                  - generic [ref=e92]: ✕
+                - generic "点击添加/移除此词汇" [ref=e93] [cursor=pointer]:
+                  - text: 青春活力感
+                  - generic [ref=e94]: ✕
+                - generic "点击添加/移除此词汇" [ref=e95] [cursor=pointer]:
+                  - text: 奢华典雅感
+                  - generic [ref=e96]: ✕
+                - generic "点击添加/移除此词汇" [ref=e97] [cursor=pointer]:
+                  - text: 冷酷工业感
+                  - generic [ref=e98]: ✕
+                - generic "点击添加/移除此词汇" [ref=e99] [cursor=pointer]:
+                  - text: 甜美梦幻感
+                  - generic [ref=e100]: ✕
+                - generic "点击添加/移除此词汇" [ref=e101] [cursor=pointer]:
+                  - text: 复古怀旧感
+                  - generic [ref=e102]: ✕
+                - generic "点击添加/移除此词汇" [ref=e103] [cursor=pointer]:
+                  - text: 运动能量感
+                  - generic [ref=e104]: ✕
+                - generic "点击添加/移除此词汇" [ref=e105] [cursor=pointer]:
+                  - text: 神秘诱惑感
+                  - generic [ref=e106]: ✕
+                - generic "点击添加/移除此词汇" [ref=e107] [cursor=pointer]:
+                  - text: 纯净透明感
+                  - generic [ref=e108]: ✕
+                - generic "点击添加/移除此词汇" [ref=e109] [cursor=pointer]:
+                  - text: 热闹狂欢感
+                  - generic [ref=e110]: ✕
+                - generic "点击添加/移除此词汇" [ref=e111] [cursor=pointer]:
+                  - text: 简约冷淡感
+                  - generic [ref=e112]: ✕
+                - generic "点击添加/移除此词汇" [ref=e113] [cursor=pointer]:
+                  - text: 温暖舒适感
+                  - generic [ref=e114]: ✕
+                - generic "点击添加/移除此词汇" [ref=e115] [cursor=pointer]:
+                  - text: 优雅知性感
+                  - generic [ref=e116]: ✕
+                - generic "点击添加/移除此词汇" [ref=e117] [cursor=pointer]:
+                  - text: 潮流街头感
+                  - generic [ref=e118]: ✕
+                - generic "点击添加/移除此词汇" [ref=e119] [cursor=pointer]:
+                  - text: 艺术殿堂感
+                  - generic [ref=e120]: ✕
+                - generic "点击添加/移除此词汇" [ref=e121] [cursor=pointer]:
+                  - text: 浪漫情人节
+                  - generic [ref=e122]: ✕
+                - generic "点击添加/移除此词汇" [ref=e123] [cursor=pointer]:
+                  - text: 春节喜庆氛围
+                  - generic [ref=e124]: ✕
+            - generic [ref=e125]:
+              - generic [ref=e126]:
+                - generic [ref=e127]:
+                  - text: 主要内容
+                  - generic [ref=e128]: "66"
+                - generic [ref=e129]:
+                  - button "🔍 智能推荐" [ref=e130] [cursor=pointer]
+                  - button "添加词汇" [ref=e131] [cursor=pointer]
+                  - button "设为默认" [ref=e132] [cursor=pointer]
+                  - button "恢复" [ref=e133] [cursor=pointer]
+              - generic [ref=e134]:
+                - generic "点击选中父词，或点击▼展开23个子商品" [ref=e135] [cursor=pointer]:
+                  - text: 美妆
+                  - generic [ref=e137]: "23"
+                  - generic "展开/收起子商品" [ref=e138]: ▼
+                  - generic [ref=e139]: ✕
+                - generic "点击选中父词，或点击▼展开19个子商品" [ref=e140] [cursor=pointer]:
+                  - text: 护肤
+                  - generic [ref=e142]: "19"
+                  - generic "展开/收起子商品" [ref=e143]: ▼
+                  - generic [ref=e144]: ✕
+                - generic "点击选中父词，或点击▼展开18个子商品" [ref=e145] [cursor=pointer]:
+                  - text: 个护清洁
+                  - generic [ref=e147]: "18"
+                  - generic "展开/收起子商品" [ref=e148]: ▼
+                  - generic [ref=e149]: ✕
+                - generic "点击选中父词，或点击▼展开18个子商品" [ref=e150] [cursor=pointer]:
+                  - text: 香水香氛
+                  - generic [ref=e152]: "18"
+                  - generic "展开/收起子商品" [ref=e153]: ▼
+                  - generic [ref=e154]: ✕
+                - generic "点击选中父词，或点击▼展开25个子商品" [ref=e155] [cursor=pointer]:
+                  - text: 女装
+                  - generic [ref=e157]: "25"
+                  - generic "展开/收起子商品" [ref=e158]: ▼
+                  - generic [ref=e159]: ✕
+                - generic "点击选中父词，或点击▼展开20个子商品" [ref=e160] [cursor=pointer]:
+                  - text: 男装
+                  - generic [ref=e162]: "20"
+                  - generic "展开/收起子商品" [ref=e163]: ▼
+                  - generic [ref=e164]: ✕
+                - generic "点击选中父词，或点击▼展开22个子商品" [ref=e165] [cursor=pointer]:
+                  - text: 鞋靴
+                  - generic [ref=e167]: "22"
+                  - generic "展开/收起子商品" [ref=e168]: ▼
+                  - generic [ref=e169]: ✕
+                - generic "点击选中父词，或点击▼展开24个子商品" [ref=e170] [cursor=pointer]:
+                  - text: 箱包
+                  - generic [ref=e172]: "24"
+                  - generic "展开/收起子商品" [ref=e173]: ▼
+                  - generic [ref=e174]: ✕
+                - generic "点击选中父词，或点击▼展开26个子商品" [ref=e175] [cursor=pointer]:
+                  - text: 配饰
+                  - generic [ref=e177]: "26"
+                  - generic "展开/收起子商品" [ref=e178]: ▼
+                  - generic [ref=e179]: ✕
+                - generic "点击选中父词，或点击▼展开21个子商品" [ref=e180] [cursor=pointer]:
+                  - text: 珠宝首饰
+                  - generic [ref=e182]: "21"
+                  - generic "展开/收起子商品" [ref=e183]: ▼
+                  - generic [ref=e184]: ✕
+                - generic "点击选中父词，或点击▼展开15个子商品" [ref=e185] [cursor=pointer]:
+                  - text: 腕表
+                  - generic [ref=e187]: "15"
+                  - generic "展开/收起子商品" [ref=e188]: ▼
+                  - generic [ref=e189]: ✕
+                - generic "点击选中父词，或点击▼展开16个子商品" [ref=e190] [cursor=pointer]:
+                  - text: 手机
+                  - generic [ref=e192]: "16"
+                  - generic "展开/收起子商品" [ref=e193]: ▼
+                  - generic [ref=e194]: ✕
+                - generic "点击选中父词，或点击▼展开18个子商品" [ref=e195] [cursor=pointer]:
+                  - text: 电脑平板
+                  - generic [ref=e197]: "18"
+                  - generic "展开/收起子商品" [ref=e198]: ▼
+                  - generic [ref=e199]: ✕
+                - generic "点击选中父词，或点击▼展开21个子商品" [ref=e200] [cursor=pointer]:
+                  - text: 影音数码
+                  - generic [ref=e202]: "21"
+                  - generic "展开/收起子商品" [ref=e203]: ▼
+                  - generic [ref=e204]: ✕
+                - generic "点击选中父词，或点击▼展开23个子商品" [ref=e205] [cursor=pointer]:
+                  - text: 零食糕点
+                  - generic [ref=e207]: "23"
+                  - generic "展开/收起子商品" [ref=e208]: ▼
+                  - generic [ref=e209]: ✕
+                - generic "点击选中父词，或点击▼展开17个子商品" [ref=e210] [cursor=pointer]:
+                  - text: 饮品冲调
+                  - generic [ref=e212]: "17"
+                  - generic "展开/收起子商品" [ref=e213]: ▼
+                  - generic [ref=e214]: ✕
+                - generic "点击选中父词，或点击▼展开19个子商品" [ref=e215] [cursor=pointer]:
+                  - text: 饮料
+                  - generic [ref=e217]: "19"
+                  - generic "展开/收起子商品" [ref=e218]: ▼
+                  - generic [ref=e219]: ✕
+                - generic "点击选中父词，或点击▼展开22个子商品" [ref=e220] [cursor=pointer]:
+                  - text: 水果生鲜
+                  - generic [ref=e222]: "22"
+                  - generic "展开/收起子商品" [ref=e223]: ▼
+                  - generic [ref=e224]: ✕
+                - generic "点击选中父词，或点击▼展开21个子商品" [ref=e225] [cursor=pointer]:
+                  - text: 滋补保健
+                  - generic [ref=e227]: "21"
+                  - generic "展开/收起子商品" [ref=e228]: ▼
+                  - generic [ref=e229]: ✕
+                - generic "点击选中父词，或点击▼展开19个子商品" [ref=e230] [cursor=pointer]:
+                  - text: 家纺布艺
+                  - generic [ref=e232]: "19"
+                  - generic "展开/收起子商品" [ref=e233]: ▼
+                  - generic [ref=e234]: ✕
+                - generic "点击选中父词，或点击▼展开22个子商品" [ref=e235] [cursor=pointer]:
+                  - text: 厨房用具
+                  - generic [ref=e237]: "22"
+                  - generic "展开/收起子商品" [ref=e238]: ▼
+                  - generic [ref=e239]: ✕
+                - generic "点击选中父词，或点击▼展开21个子商品" [ref=e240] [cursor=pointer]:
+                  - text: 家居装饰
+                  - generic [ref=e242]: "21"
+                  - generic "展开/收起子商品" [ref=e243]: ▼
+                  - generic [ref=e244]: ✕
+                - generic "点击选中父词，或点击▼展开21个子商品" [ref=e245] [cursor=pointer]:
+                  - text: 清洁日用
+                  - generic [ref=e247]: "21"
+                  - generic "展开/收起子商品" [ref=e248]: ▼
+                  - generic [ref=e249]: ✕
+                - generic "点击选中父词，或点击▼展开23个子商品" [ref=e250] [cursor=pointer]:
+                  - text: 母婴用品
+                  - generic [ref=e252]: "23"
+                  - generic "展开/收起子商品" [ref=e253]: ▼
+                  - generic [ref=e254]: ✕
+                - generic "点击选中父词，或点击▼展开24个子商品" [ref=e255] [cursor=pointer]:
+                  - text: 宠物用品
+                  - generic [ref=e257]: "24"
+                  - generic "展开/收起子商品" [ref=e258]: ▼
+                  - generic [ref=e259]: ✕
+                - generic "点击选中父词，或点击▼展开18个子商品" [ref=e260] [cursor=pointer]:
+                  - text: 运动健身
+                  - generic [ref=e262]: "18"
+                  - generic "展开/收起子商品" [ref=e263]: ▼
+                  - generic [ref=e264]: ✕
+                - generic "点击选中父词，或点击▼展开20个子商品" [ref=e265] [cursor=pointer]:
+                  - text: 户外露营
+                  - generic [ref=e267]: "20"
+                  - generic "展开/收起子商品" [ref=e268]: ▼
+                  - generic [ref=e269]: ✕
+                - generic "点击添加/移除此词汇" [ref=e270] [cursor=pointer]:
+                  - text: 玩具
+                  - generic [ref=e271]: ✕
+                - generic "点击添加/移除此词汇" [ref=e272] [cursor=pointer]:
+                  - text: 盲盒
+                  - generic [ref=e273]: ✕
+                - generic "点击添加/移除此词汇" [ref=e274] [cursor=pointer]:
+                  - text: 手办
+                  - generic [ref=e275]: ✕
+                - generic "点击添加/移除此词汇" [ref=e276] [cursor=pointer]:
+                  - text: 潮玩
+                  - generic [ref=e277]: ✕
+                - generic "点击添加/移除此词汇" [ref=e278] [cursor=pointer]:
+                  - text: 积木
+                  - generic [ref=e279]: ✕
+                - generic "点击添加/移除此词汇" [ref=e280] [cursor=pointer]:
+                  - text: 毛绒公仔
+                  - generic [ref=e281]: ✕
+                - generic "点击添加/移除此词汇" [ref=e282] [cursor=pointer]:
+                  - text: 模型
+                  - generic [ref=e283]: ✕
+                - generic "点击添加/移除此词汇" [ref=e284] [cursor=pointer]:
+                  - text: 文具
+                  - generic [ref=e285]: ✕
+                - generic "点击添加/移除此词汇" [ref=e286] [cursor=pointer]:
+                  - text: 手账本
+                  - generic [ref=e287]: ✕
+                - generic "点击添加/移除此词汇" [ref=e288] [cursor=pointer]:
+                  - text: 钢笔
+                  - generic [ref=e289]: ✕
+                - generic "点击添加/移除此词汇" [ref=e290] [cursor=pointer]:
+                  - text: 马克笔
+                  - generic [ref=e291]: ✕
+                - generic "点击添加/移除此词汇" [ref=e292] [cursor=pointer]:
+                  - text: 贴纸
+                  - generic [ref=e293]: ✕
+                - generic "点击添加/移除此词汇" [ref=e294] [cursor=pointer]:
+                  - text: 胶带
+                  - generic [ref=e295]: ✕
+                - generic "点击添加/移除此词汇" [ref=e296] [cursor=pointer]:
+                  - text: 文创礼品
+                  - generic [ref=e297]: ✕
+                - generic "点击添加/移除此词汇" [ref=e298] [cursor=pointer]:
+                  - text: 明信片
+                  - generic [ref=e299]: ✕
+                - generic "点击添加/移除此词汇" [ref=e300] [cursor=pointer]:
+                  - text: 书签
+                  - generic [ref=e301]: ✕
+                - generic "点击添加/移除此词汇" [ref=e302] [cursor=pointer]:
+                  - text: 日历
+                  - generic [ref=e303]: ✕
+                - generic "点击添加/移除此词汇" [ref=e304] [cursor=pointer]:
+                  - text: 贺卡
+                  - generic [ref=e305]: ✕
+                - generic "点击添加/移除此词汇" [ref=e306] [cursor=pointer]:
+                  - text: 鲜花
+                  - generic [ref=e307]: ✕
+                - generic "点击添加/移除此词汇" [ref=e308] [cursor=pointer]:
+                  - text: 花束
+                  - generic [ref=e309]: ✕
+                - generic "点击添加/移除此词汇" [ref=e310] [cursor=pointer]:
+                  - text: 永生花
+                  - generic [ref=e311]: ✕
+                - generic "点击添加/移除此词汇" [ref=e312] [cursor=pointer]:
+                  - text: 绿植盆栽
+                  - generic [ref=e313]: ✕
+                - generic "点击添加/移除此词汇" [ref=e314] [cursor=pointer]:
+                  - text: 多肉组合
+                  - generic [ref=e315]: ✕
+                - generic "点击添加/移除此词汇" [ref=e316] [cursor=pointer]:
+                  - text: 节日礼盒
+                  - generic [ref=e317]: ✕
+                - generic "点击添加/移除此词汇" [ref=e318] [cursor=pointer]:
+                  - text: 圣诞礼盒
+                  - generic [ref=e319]: ✕
+                - generic "点击添加/移除此词汇" [ref=e320] [cursor=pointer]:
+                  - text: 新年礼盒
+                  - generic [ref=e321]: ✕
+                - generic "点击添加/移除此词汇" [ref=e322] [cursor=pointer]:
+                  - text: 情人节礼盒
+                  - generic [ref=e323]: ✕
+                - generic "点击添加/移除此词汇" [ref=e324] [cursor=pointer]:
+                  - text: 母亲节礼盒
+                  - generic [ref=e325]: ✕
+                - generic "点击添加/移除此词汇" [ref=e326] [cursor=pointer]:
+                  - text: 明星同款
+                  - generic [ref=e327]: ✕
+                - generic "点击添加/移除此词汇" [ref=e328] [cursor=pointer]:
+                  - text: 联名限定款
+                  - generic [ref=e329]: ✕
+                - generic "点击添加/移除此词汇" [ref=e330] [cursor=pointer]:
+                  - text: 季节限定品
+                  - generic [ref=e331]: ✕
+                - generic "点击添加/移除此词汇" [ref=e332] [cursor=pointer]:
+                  - text: 限量发售
+                  - generic [ref=e333]: ✕
+                - generic "点击添加/移除此词汇" [ref=e334] [cursor=pointer]:
+                  - text: 首发新品
+                  - generic [ref=e335]: ✕
+                - generic "点击添加/移除此词汇" [ref=e336] [cursor=pointer]:
+                  - text: 电子产品
+                  - generic [ref=e337]: ✕
+                - generic "点击添加/移除此词汇" [ref=e338] [cursor=pointer]:
+                  - text: 小家电
+                  - generic [ref=e339]: ✕
+                - generic "点击添加/移除此词汇" [ref=e340] [cursor=pointer]:
+                  - text: 灯具
+                  - generic [ref=e341]: ✕
+                - generic "点击添加/移除此词汇" [ref=e342] [cursor=pointer]:
+                  - text: 雨伞
+                  - generic [ref=e343]: ✕
+                - generic "点击添加/移除此词汇" [ref=e344] [cursor=pointer]:
+                  - text: 保温杯
+                  - generic [ref=e345]: ✕
+                - generic "点击添加/移除此词汇" [ref=e346] [cursor=pointer]:
+                  - text: 行李箱
+                  - generic [ref=e347]: ✕
+            - generic [ref=e348]:
+              - generic [ref=e349]:
+                - generic [ref=e350]:
+                  - text: 展示状态
+                  - generic [ref=e351]: "18"
+                - generic [ref=e352]:
+                  - button "🔍 智能推荐" [ref=e353] [cursor=pointer]
+                  - button "添加词汇" [ref=e354] [cursor=pointer]
+                  - button "设为默认" [ref=e355] [cursor=pointer]
+                  - button "恢复" [ref=e356] [cursor=pointer]
+              - generic [ref=e357]:
+                - generic "点击添加/移除此词汇" [ref=e358] [cursor=pointer]:
+                  - text: 产品悬浮展示
+                  - generic [ref=e359]: ✕
+                - generic "点击添加/移除此词汇" [ref=e360] [cursor=pointer]:
+                  - text: 模特手持产品
+                  - generic [ref=e361]: ✕
+                - generic "点击添加/移除此词汇" [ref=e362] [cursor=pointer]:
+                  - text: 产品45度展示
+                  - generic [ref=e363]: ✕
+                - generic "点击添加/移除此词汇" [ref=e364] [cursor=pointer]:
+                  - text: 产品拆解爆炸图
+                  - generic [ref=e365]: ✕
+                - generic "点击添加/移除此词汇" [ref=e366] [cursor=pointer]:
+                  - text: 微距特写细节
+                  - generic [ref=e367]: ✕
+                - generic "点击添加/移除此词汇" [ref=e368] [cursor=pointer]:
+                  - text: 产品组合阵列
+                  - generic [ref=e369]: ✕
+                - generic "点击添加/移除此词汇" [ref=e370] [cursor=pointer]:
+                  - text: 动态飞溅效果
+                  - generic [ref=e371]: ✕
+                - generic "点击添加/移除此词汇" [ref=e372] [cursor=pointer]:
+                  - text: 产品切开截面
+                  - generic [ref=e373]: ✕
+                - generic "点击添加/移除此词汇" [ref=e374] [cursor=pointer]:
+                  - text: 光影穿过产品
+                  - generic [ref=e375]: ✕
+                - generic "点击添加/移除此词汇" [ref=e376] [cursor=pointer]:
+                  - text: 水面倒影展示
+                  - generic [ref=e377]: ✕
+                - generic "点击添加/移除此词汇" [ref=e378] [cursor=pointer]:
+                  - text: 产品旋转动感
+                  - generic [ref=e379]: ✕
+                - generic "点击添加/移除此词汇" [ref=e380] [cursor=pointer]:
+                  - text: 层叠排列造型
+                  - generic [ref=e381]: ✕
+                - generic "点击添加/移除此词汇" [ref=e382] [cursor=pointer]:
+                  - text: 产品与自然元素融合
+                  - generic [ref=e383]: ✕
+                - generic "点击添加/移除此词汇" [ref=e384] [cursor=pointer]:
+                  - text: 产品悬浮于光晕中
+                  - generic [ref=e385]: ✕
+                - generic "点击添加/移除此词汇" [ref=e386] [cursor=pointer]:
+                  - text: 镜面多重反射
+                  - generic [ref=e387]: ✕
+                - generic "点击添加/移除此词汇" [ref=e388] [cursor=pointer]:
+                  - text: 产品结冰或燃烧特效
+                  - generic [ref=e389]: ✕
+                - generic "点击添加/移除此词汇" [ref=e390] [cursor=pointer]:
+                  - text: 半透明透视展示
+                  - generic [ref=e391]: ✕
+                - generic "点击添加/移除此词汇" [ref=e392] [cursor=pointer]:
+                  - text: 产品与几何图形互动
+                  - generic [ref=e393]: ✕
+            - generic [ref=e394]:
+              - generic [ref=e395]:
+                - generic [ref=e396]:
+                  - text: 场景
+                  - generic [ref=e397]: "20"
+                - generic [ref=e398]:
+                  - button "🔍 智能推荐" [ref=e399] [cursor=pointer]
+                  - button "添加词汇" [ref=e400] [cursor=pointer]
+                  - button "设为默认" [ref=e401] [cursor=pointer]
+                  - button "恢复" [ref=e402] [cursor=pointer]
+              - generic [ref=e403]:
+                - generic "点击添加/移除此词汇" [ref=e404] [cursor=pointer]:
+                  - text: 专业摄影棚
+                  - generic [ref=e405]: ✕
+                - generic "点击添加/移除此词汇" [ref=e406] [cursor=pointer]:
+                  - text: 极简白空间
+                  - generic [ref=e407]: ✕
+                - generic "点击添加/移除此词汇" [ref=e408] [cursor=pointer]:
+                  - text: 豪华酒店套房
+                  - generic [ref=e409]: ✕
+                - generic "点击添加/移除此词汇" [ref=e410] [cursor=pointer]:
+                  - text: 户外花园
+                  - generic [ref=e411]: ✕
+                - generic "点击添加/移除此词汇" [ref=e412] [cursor=pointer]:
+                  - text: 城市街头
+                  - generic [ref=e413]: ✕
+                - generic "点击添加/移除此词汇" [ref=e414] [cursor=pointer]:
+                  - text: 海边沙滩
+                  - generic [ref=e415]: ✕
+                - generic "点击添加/移除此词汇" [ref=e416] [cursor=pointer]:
+                  - text: 雪地场景
+                  - generic [ref=e417]: ✕
+                - generic "点击添加/移除此词汇" [ref=e418] [cursor=pointer]:
+                  - text: 森林深处
+                  - generic [ref=e419]: ✕
+                - generic "点击添加/移除此词汇" [ref=e420] [cursor=pointer]:
+                  - text: 咖啡厅一角
+                  - generic [ref=e421]: ✕
+                - generic "点击添加/移除此词汇" [ref=e422] [cursor=pointer]:
+                  - text: 卧室梳妆台
+                  - generic [ref=e423]: ✕
+                - generic "点击添加/移除此词汇" [ref=e424] [cursor=pointer]:
+                  - text: 浴室水流中
+                  - generic [ref=e425]: ✕
+                - generic "点击添加/移除此词汇" [ref=e426] [cursor=pointer]:
+                  - text: 办公桌面
+                  - generic [ref=e427]: ✕
+                - generic "点击添加/移除此词汇" [ref=e428] [cursor=pointer]:
+                  - text: 健身房
+                  - generic [ref=e429]: ✕
+                - generic "点击添加/移除此词汇" [ref=e430] [cursor=pointer]:
+                  - text: 厨房台面
+                  - generic [ref=e431]: ✕
+                - generic "点击添加/移除此词汇" [ref=e432] [cursor=pointer]:
+                  - text: 美术馆展厅
+                  - generic [ref=e433]: ✕
+                - generic "点击添加/移除此词汇" [ref=e434] [cursor=pointer]:
+                  - text: 飞机头等舱
+                  - generic [ref=e435]: ✕
+                - generic "点击添加/移除此词汇" [ref=e436] [cursor=pointer]:
+                  - text: 游艇甲板
+                  - generic [ref=e437]: ✕
+                - generic "点击添加/移除此词汇" [ref=e438] [cursor=pointer]:
+                  - text: 落日天台
+                  - generic [ref=e439]: ✕
+                - generic "点击添加/移除此词汇" [ref=e440] [cursor=pointer]:
+                  - text: 荧光派对
+                  - generic [ref=e441]: ✕
+                - generic "点击添加/移除此词汇" [ref=e442] [cursor=pointer]:
+                  - text: 直播间背景
+                  - generic [ref=e443]: ✕
+            - generic [ref=e444]:
+              - generic [ref=e445]:
+                - generic [ref=e446]:
+                  - text: 风格
+                  - generic [ref=e447]: "20"
+                - generic [ref=e448]:
+                  - button "🔍 智能推荐" [ref=e449] [cursor=pointer]
+                  - button "添加词汇" [ref=e450] [cursor=pointer]
+                  - button "设为默认" [ref=e451] [cursor=pointer]
+                  - button "恢复" [ref=e452] [cursor=pointer]
+              - generic [ref=e453]:
+                - generic "点击添加/移除此词汇" [ref=e454] [cursor=pointer]:
+                  - text: 极简主义
+                  - generic [ref=e455]: ✕
+                - generic "点击添加/移除此词汇" [ref=e456] [cursor=pointer]:
+                  - text: 轻奢质感风
+                  - generic [ref=e457]: ✕
+                - generic "点击添加/移除此词汇" [ref=e458] [cursor=pointer]:
+                  - text: 赛博朋克风
+                  - generic [ref=e459]: ✕
+                - generic "点击添加/移除此词汇" [ref=e460] [cursor=pointer]:
+                  - text: 复古胶片感
+                  - generic [ref=e461]: ✕
+                - generic "点击添加/移除此词汇" [ref=e462] [cursor=pointer]:
+                  - text: 孟菲斯风格
+                  - generic [ref=e463]: ✕
+                - generic "点击添加/移除此词汇" [ref=e464] [cursor=pointer]:
+                  - text: 波普艺术
+                  - generic [ref=e465]: ✕
+                - generic "点击添加/移除此词汇" [ref=e466] [cursor=pointer]:
+                  - text: 日系小清新
+                  - generic [ref=e467]: ✕
+                - generic "点击添加/移除此词汇" [ref=e468] [cursor=pointer]:
+                  - text: 欧美时尚大片
+                  - generic [ref=e469]: ✕
+                - generic "点击添加/移除此词汇" [ref=e470] [cursor=pointer]:
+                  - text: 国潮新中式
+                  - generic [ref=e471]: ✕
+                - generic "点击添加/移除此词汇" [ref=e472] [cursor=pointer]:
+                  - text: 3D写实渲染
+                  - generic [ref=e473]: ✕
+                - generic "点击添加/移除此词汇" [ref=e474] [cursor=pointer]:
+                  - text: 扁平化插画
+                  - generic [ref=e475]: ✕
+                - generic "点击添加/移除此词汇" [ref=e476] [cursor=pointer]:
+                  - text: 线描手绘风
+                  - generic [ref=e477]: ✕
+                - generic "点击添加/移除此词汇" [ref=e478] [cursor=pointer]:
+                  - text: 水彩晕染
+                  - generic [ref=e479]: ✕
+                - generic "点击添加/移除此词汇" [ref=e480] [cursor=pointer]:
+                  - text: 酸性设计
+                  - generic [ref=e481]: ✕
+                - generic "点击添加/移除此词汇" [ref=e482] [cursor=pointer]:
+                  - text: 弥散光感
+                  - generic [ref=e483]: ✕
+                - generic "点击添加/移除此词汇" [ref=e484] [cursor=pointer]:
+                  - text: Y2K千禧风
+                  - generic [ref=e485]: ✕
+                - generic "点击添加/移除此词汇" [ref=e486] [cursor=pointer]:
+                  - text: 蒸汽波
+                  - generic [ref=e487]: ✕
+                - generic "点击添加/移除此词汇" [ref=e488] [cursor=pointer]:
+                  - text: 包豪斯现代
+                  - generic [ref=e489]: ✕
+                - generic "点击添加/移除此词汇" [ref=e490] [cursor=pointer]:
+                  - text: 自然有机风
+                  - generic [ref=e491]: ✕
+                - generic "点击添加/移除此词汇" [ref=e492] [cursor=pointer]:
+                  - text: 波西米亚
+                  - generic [ref=e493]: ✕
+            - generic [ref=e494]:
+              - generic [ref=e495]:
+                - generic [ref=e496]:
+                  - text: 色彩
+                  - generic [ref=e497]: "20"
+                - generic [ref=e498]:
+                  - button "🔍 智能推荐" [ref=e499] [cursor=pointer]
+                  - button "添加词汇" [ref=e500] [cursor=pointer]
+                  - button "设为默认" [ref=e501] [cursor=pointer]
+                  - button "恢复" [ref=e502] [cursor=pointer]
+              - generic [ref=e503]:
+                - generic "点击添加/移除此词汇" [ref=e504] [cursor=pointer]:
+                  - text: 莫兰迪色系
+                  - generic [ref=e505]: ✕
+                - generic "点击添加/移除此词汇" [ref=e506] [cursor=pointer]:
+                  - text: 马卡龙色系
+                  - generic [ref=e507]: ✕
+                - generic "点击添加/移除此词汇" [ref=e508] [cursor=pointer]:
+                  - text: 高饱和撞色
+                  - generic [ref=e509]: ✕
+                - generic "点击添加/移除此词汇" [ref=e510] [cursor=pointer]:
+                  - text: 黑白极简
+                  - generic [ref=e511]: ✕
+                - generic "点击添加/移除此词汇" [ref=e512] [cursor=pointer]:
+                  - text: 金色奢华风
+                  - generic [ref=e513]: ✕
+                - generic "点击添加/移除此词汇" [ref=e514] [cursor=pointer]:
+                  - text: 蒂芙尼蓝
+                  - generic [ref=e515]: ✕
+                - generic "点击添加/移除此词汇" [ref=e516] [cursor=pointer]:
+                  - text: 爱马仕橙
+                  - generic [ref=e517]: ✕
+                - generic "点击添加/移除此词汇" [ref=e518] [cursor=pointer]:
+                  - text: 克莱因蓝
+                  - generic [ref=e519]: ✕
+                - generic "点击添加/移除此词汇" [ref=e520] [cursor=pointer]:
+                  - text: 千禧粉
+                  - generic [ref=e521]: ✕
+                - generic "点击添加/移除此词汇" [ref=e522] [cursor=pointer]:
+                  - text: 荧光绿
+                  - generic [ref=e523]: ✕
+                - generic "点击添加/移除此词汇" [ref=e524] [cursor=pointer]:
+                  - text: 金属色渐变
+                  - generic [ref=e525]: ✕
+                - generic "点击添加/移除此词汇" [ref=e526] [cursor=pointer]:
+                  - text: 紫蓝渐变
+                  - generic [ref=e527]: ✕
+                - generic "点击添加/移除此词汇" [ref=e528] [cursor=pointer]:
+                  - text: 温暖大地色
+                  - generic [ref=e529]: ✕
+                - generic "点击添加/移除此词汇" [ref=e530] [cursor=pointer]:
+                  - text: 清新薄荷绿
+                  - generic [ref=e531]: ✕
+                - generic "点击添加/移除此词汇" [ref=e532] [cursor=pointer]:
+                  - text: 经典红金配
+                  - generic [ref=e533]: ✕
+                - generic "点击添加/移除此词汇" [ref=e534] [cursor=pointer]:
+                  - text: 赛博霓虹灯色
+                  - generic [ref=e535]: ✕
+                - generic "点击添加/移除此词汇" [ref=e536] [cursor=pointer]:
+                  - text: 奶油白
+                  - generic [ref=e537]: ✕
+                - generic "点击添加/移除此词汇" [ref=e538] [cursor=pointer]:
+                  - text: 高级灰
+                  - generic [ref=e539]: ✕
+                - generic "点击添加/移除此词汇" [ref=e540] [cursor=pointer]:
+                  - text: 深海蓝
+                  - generic [ref=e541]: ✕
+                - generic "点击添加/移除此词汇" [ref=e542] [cursor=pointer]:
+                  - text: 樱花粉
+                  - generic [ref=e543]: ✕
+            - generic [ref=e544]:
+              - generic [ref=e545]:
+                - generic [ref=e546]:
+                  - text: 质感
+                  - generic [ref=e547]: "20"
+                - generic [ref=e548]:
+                  - button "🔍 智能推荐" [ref=e549] [cursor=pointer]
+                  - button "添加词汇" [ref=e550] [cursor=pointer]
+                  - button "设为默认" [ref=e551] [cursor=pointer]
+                  - button "恢复" [ref=e552] [cursor=pointer]
+              - generic [ref=e553]:
+                - generic "点击添加/移除此词汇" [ref=e554] [cursor=pointer]:
+                  - text: 金属拉丝
+                  - generic [ref=e555]: ✕
+                - generic "点击添加/移除此词汇" [ref=e556] [cursor=pointer]:
+                  - text: 磨砂哑光
+                  - generic [ref=e557]: ✕
+                - generic "点击添加/移除此词汇" [ref=e558] [cursor=pointer]:
+                  - text: 亮面高光
+                  - generic [ref=e559]: ✕
+                - generic "点击添加/移除此词汇" [ref=e560] [cursor=pointer]:
+                  - text: 玻璃通透
+                  - generic [ref=e561]: ✕
+                - generic "点击添加/移除此词汇" [ref=e562] [cursor=pointer]:
+                  - text: 陶瓷釉面
+                  - generic [ref=e563]: ✕
+                - generic "点击添加/移除此词汇" [ref=e564] [cursor=pointer]:
+                  - text: 皮革纹理
+                  - generic [ref=e565]: ✕
+                - generic "点击添加/移除此词汇" [ref=e566] [cursor=pointer]:
+                  - text: 丝绸柔滑
+                  - generic [ref=e567]: ✕
+                - generic "点击添加/移除此词汇" [ref=e568] [cursor=pointer]:
+                  - text: 珠光贝母
+                  - generic [ref=e569]: ✕
+                - generic "点击添加/移除此词汇" [ref=e570] [cursor=pointer]:
+                  - text: 液态流动
+                  - generic [ref=e571]: ✕
+                - generic "点击添加/移除此词汇" [ref=e572] [cursor=pointer]:
+                  - text: 冰晶透明
+                  - generic [ref=e573]: ✕
+                - generic "点击添加/移除此词汇" [ref=e574] [cursor=pointer]:
+                  - text: 天鹅绒
+                  - generic [ref=e575]: ✕
+                - generic "点击添加/移除此词汇" [ref=e576] [cursor=pointer]:
+                  - text: 大理石纹
+                  - generic [ref=e577]: ✕
+                - generic "点击添加/移除此词汇" [ref=e578] [cursor=pointer]:
+                  - text: 木纹肌理
+                  - generic [ref=e579]: ✕
+                - generic "点击添加/移除此词汇" [ref=e580] [cursor=pointer]:
+                  - text: 钻石切割面
+                  - generic [ref=e581]: ✕
+                - generic "点击添加/移除此词汇" [ref=e582] [cursor=pointer]:
+                  - text: 水光镜面
+                  - generic [ref=e583]: ✕
+                - generic "点击添加/移除此词汇" [ref=e584] [cursor=pointer]:
+                  - text: 植绒柔雾
+                  - generic [ref=e585]: ✕
+                - generic "点击添加/移除此词汇" [ref=e586] [cursor=pointer]:
+                  - text: 珐琅彩
+                  - generic [ref=e587]: ✕
+                - generic "点击添加/移除此词汇" [ref=e588] [cursor=pointer]:
+                  - text: 拉丝不锈钢
+                  - generic [ref=e589]: ✕
+                - generic "点击添加/移除此词汇" [ref=e590] [cursor=pointer]:
+                  - text: 液态金属
+                  - generic [ref=e591]: ✕
+                - generic "点击添加/移除此词汇" [ref=e592] [cursor=pointer]:
+                  - text: 碳纤维纹理
+                  - generic [ref=e593]: ✕
+            - generic [ref=e594]:
+              - generic [ref=e595]:
+                - generic [ref=e596]:
+                  - text: 光影
+                  - generic [ref=e597]: "18"
+                - generic [ref=e598]:
+                  - button "🔍 智能推荐" [ref=e599] [cursor=pointer]
+                  - button "添加词汇" [ref=e600] [cursor=pointer]
+                  - button "设为默认" [ref=e601] [cursor=pointer]
+                  - button "恢复" [ref=e602] [cursor=pointer]
+              - generic [ref=e603]:
+                - generic "点击添加/移除此词汇" [ref=e604] [cursor=pointer]:
+                  - text: 柔光漫射
+                  - generic [ref=e605]: ✕
+                - generic "点击添加/移除此词汇" [ref=e606] [cursor=pointer]:
+                  - text: 硬光侧打
+                  - generic [ref=e607]: ✕
+                - generic "点击添加/移除此词汇" [ref=e608] [cursor=pointer]:
+                  - text: 逆光轮廓光
+                  - generic [ref=e609]: ✕
+                - generic "点击添加/移除此词汇" [ref=e610] [cursor=pointer]:
+                  - text: 顶光聚焦
+                  - generic [ref=e611]: ✕
+                - generic "点击添加/移除此词汇" [ref=e612] [cursor=pointer]:
+                  - text: 蝴蝶光
+                  - generic [ref=e613]: ✕
+                - generic "点击添加/移除此词汇" [ref=e614] [cursor=pointer]:
+                  - text: 伦勃朗光
+                  - generic [ref=e615]: ✕
+                - generic "点击添加/移除此词汇" [ref=e616] [cursor=pointer]:
+                  - text: 环形光
+                  - generic [ref=e617]: ✕
+                - generic "点击添加/移除此词汇" [ref=e618] [cursor=pointer]:
+                  - text: 霓虹光晕
+                  - generic [ref=e619]: ✕
+                - generic "点击添加/移除此词汇" [ref=e620] [cursor=pointer]:
+                  - text: 自然窗光
+                  - generic [ref=e621]: ✕
+                - generic "点击添加/移除此词汇" [ref=e622] [cursor=pointer]:
+                  - text: 黄金时刻暖光
+                  - generic [ref=e623]: ✕
+                - generic "点击添加/移除此词汇" [ref=e624] [cursor=pointer]:
+                  - text: 冷白棚拍光
+                  - generic [ref=e625]: ✕
+                - generic "点击添加/移除此词汇" [ref=e626] [cursor=pointer]:
+                  - text: 氛围灯带
+                  - generic [ref=e627]: ✕
+                - generic "点击添加/移除此词汇" [ref=e628] [cursor=pointer]:
+                  - text: 光斑散景效果
+                  - generic [ref=e629]: ✕
+                - generic "点击添加/移除此词汇" [ref=e630] [cursor=pointer]:
+                  - text: 电影级三点布光
+                  - generic [ref=e631]: ✕
+                - generic "点击添加/移除此词汇" [ref=e632] [cursor=pointer]:
+                  - text: 隧道光效
+                  - generic [ref=e633]: ✕
+                - generic "点击添加/移除此词汇" [ref=e634] [cursor=pointer]:
+                  - text: 聚光灯舞台光
+                  - generic [ref=e635]: ✕
+                - generic "点击添加/移除此词汇" [ref=e636] [cursor=pointer]:
+                  - text: 左右夹光
+                  - generic [ref=e637]: ✕
+                - generic "点击添加/移除此词汇" [ref=e638] [cursor=pointer]:
+                  - text: 底光戏剧光
+                  - generic [ref=e639]: ✕
+            - generic [ref=e640]:
+              - generic [ref=e641]:
+                - generic [ref=e642]:
+                  - text: 构图
+                  - generic [ref=e643]: "16"
+                - generic [ref=e644]:
+                  - button "🔍 智能推荐" [ref=e645] [cursor=pointer]
+                  - button "添加词汇" [ref=e646] [cursor=pointer]
+                  - button "设为默认" [ref=e647] [cursor=pointer]
+                  - button "恢复" [ref=e648] [cursor=pointer]
+              - generic [ref=e649]:
+                - generic "点击添加/移除此词汇" [ref=e650] [cursor=pointer]:
+                  - text: 居中对称构图
+                  - generic [ref=e651]: ✕
+                - generic "点击添加/移除此词汇" [ref=e652] [cursor=pointer]:
+                  - text: 三分法构图
+                  - generic [ref=e653]: ✕
+                - generic "点击添加/移除此词汇" [ref=e654] [cursor=pointer]:
+                  - text: 对角线构图
+                  - generic [ref=e655]: ✕
+                - generic "点击添加/移除此词汇" [ref=e656] [cursor=pointer]:
+                  - text: 引导线构图
+                  - generic [ref=e657]: ✕
+                - generic "点击添加/移除此词汇" [ref=e658] [cursor=pointer]:
+                  - text: 框架式构图
+                  - generic [ref=e659]: ✕
+                - generic "点击添加/移除此词汇" [ref=e660] [cursor=pointer]:
+                  - text: 大面积留白
+                  - generic [ref=e661]: ✕
+                - generic "点击添加/移除此词汇" [ref=e662] [cursor=pointer]:
+                  - text: 俯拍鸟瞰视角
+                  - generic [ref=e663]: ✕
+                - generic "点击添加/移除此词汇" [ref=e664] [cursor=pointer]:
+                  - text: 仰拍仰视视角
+                  - generic [ref=e665]: ✕
+                - generic "点击添加/移除此词汇" [ref=e666] [cursor=pointer]:
+                  - text: 微距特写
+                  - generic [ref=e667]: ✕
+                - generic "点击添加/移除此词汇" [ref=e668] [cursor=pointer]:
+                  - text: 45度产品视角
+                  - generic [ref=e669]: ✕
+                - generic "点击添加/移除此词汇" [ref=e670] [cursor=pointer]:
+                  - text: 平视标准视角
+                  - generic [ref=e671]: ✕
+                - generic "点击添加/移除此词汇" [ref=e672] [cursor=pointer]:
+                  - text: 散点分布构图
+                  - generic [ref=e673]: ✕
+                - generic "点击添加/移除此词汇" [ref=e674] [cursor=pointer]:
+                  - text: S形曲线构图
+                  - generic [ref=e675]: ✕
+                - generic "点击添加/移除此词汇" [ref=e676] [cursor=pointer]:
+                  - text: 三角形稳定构图
+                  - generic [ref=e677]: ✕
+                - generic "点击添加/移除此词汇" [ref=e678] [cursor=pointer]:
+                  - text: 前后景深层次
+                  - generic [ref=e679]: ✕
+                - generic "点击添加/移除此词汇" [ref=e680] [cursor=pointer]:
+                  - text: 镜面倒影构图
+                  - generic [ref=e681]: ✕
+            - generic [ref=e682]:
+              - generic [ref=e683]:
+                - generic [ref=e684]:
+                  - text: 画质
+                  - generic [ref=e685]: "18"
+                - generic [ref=e686]:
+                  - button "🔍 智能推荐" [ref=e687] [cursor=pointer]
+                  - button "添加词汇" [ref=e688] [cursor=pointer]
+                  - button "设为默认" [ref=e689] [cursor=pointer]
+                  - button "恢复" [ref=e690] [cursor=pointer]
+              - generic [ref=e691]:
+                - generic "点击添加/移除此词汇" [ref=e692] [cursor=pointer]:
+                  - text: 8K超高清
+                  - generic [ref=e693]: ✕
+                - generic "点击添加/移除此词汇" [ref=e694] [cursor=pointer]:
+                  - text: 电影级画质
+                  - generic [ref=e695]: ✕
+                - generic "点击添加/移除此词汇" [ref=e696] [cursor=pointer]:
+                  - text: HDR高动态范围
+                  - generic [ref=e697]: ✕
+                - generic "点击添加/移除此词汇" [ref=e698] [cursor=pointer]:
+                  - text: 超写实渲染
+                  - generic [ref=e699]: ✕
+                - generic "点击添加/移除此词汇" [ref=e700] [cursor=pointer]:
+                  - text: Octane渲染器
+                  - generic [ref=e701]: ✕
+                - generic "点击添加/移除此词汇" [ref=e702] [cursor=pointer]:
+                  - text: 虚幻引擎5
+                  - generic [ref=e703]: ✕
+                - generic "点击添加/移除此词汇" [ref=e704] [cursor=pointer]:
+                  - text: 光线追踪
+                  - generic [ref=e705]: ✕
+                - generic "点击添加/移除此词汇" [ref=e706] [cursor=pointer]:
+                  - text: 超细节纹理
+                  - generic [ref=e707]: ✕
+                - generic "点击添加/移除此词汇" [ref=e708] [cursor=pointer]:
+                  - text: 景深虚化效果
+                  - generic [ref=e709]: ✕
+                - generic "点击添加/移除此词汇" [ref=e710] [cursor=pointer]:
+                  - text: 锐利焦点
+                  - generic [ref=e711]: ✕
+                - generic "点击添加/移除此词汇" [ref=e712] [cursor=pointer]:
+                  - text: 皮肤毛孔可见
+                  - generic [ref=e713]: ✕
+                - generic "点击添加/移除此词汇" [ref=e714] [cursor=pointer]:
+                  - text: 布料纹理清晰
+                  - generic [ref=e715]: ✕
+                - generic "点击添加/移除此词汇" [ref=e716] [cursor=pointer]:
+                  - text: 微距级细节
+                  - generic [ref=e717]: ✕
+                - generic "点击添加/移除此词汇" [ref=e718] [cursor=pointer]:
+                  - text: 商业级修图品质
+                  - generic [ref=e719]: ✕
+                - generic "点击添加/移除此词汇" [ref=e720] [cursor=pointer]:
+                  - text: C4D渲染
+                  - generic [ref=e721]: ✕
+                - generic "点击添加/移除此词汇" [ref=e722] [cursor=pointer]:
+                  - text: 照片级真实感
+                  - generic [ref=e723]: ✕
+                - generic "点击添加/移除此词汇" [ref=e724] [cursor=pointer]:
+                  - text: 高精度建模
+                  - generic [ref=e725]: ✕
+                - generic "点击添加/移除此词汇" [ref=e726] [cursor=pointer]:
+                  - text: 细腻毛发渲染
+                  - generic [ref=e727]: ✕
+            - generic [ref=e728]:
+              - generic [ref=e729]:
+                - generic [ref=e730]:
+                  - text: 广告标题
+                  - generic [ref=e731]: "18"
+                - generic [ref=e732]:
+                  - button "🔍 智能推荐" [ref=e733] [cursor=pointer]
+                  - button "添加词汇" [ref=e734] [cursor=pointer]
+                  - button "设为默认" [ref=e735] [cursor=pointer]
+                  - button "恢复" [ref=e736] [cursor=pointer]
+              - generic [ref=e737]:
+                - generic "点击添加/移除此词汇" [ref=e738] [cursor=pointer]:
+                  - text: 新品尝鲜
+                  - generic [ref=e739]: ✕
+                - generic "点击添加/移除此词汇" [ref=e740] [cursor=pointer]:
+                  - text: 限时特惠
+                  - generic [ref=e741]: ✕
+                - generic "点击添加/移除此词汇" [ref=e742] [cursor=pointer]:
+                  - text: 爆款返场
+                  - generic [ref=e743]: ✕
+                - generic "点击添加/移除此词汇" [ref=e744] [cursor=pointer]:
+                  - text: 明星同款
+                  - generic [ref=e745]: ✕
+                - generic "点击添加/移除此词汇" [ref=e746] [cursor=pointer]:
+                  - text: 人手必备
+                  - generic [ref=e747]: ✕
+                - generic "点击添加/移除此词汇" [ref=e748] [cursor=pointer]:
+                  - text: 品质之选
+                  - generic [ref=e749]: ✕
+                - generic "点击添加/移除此词汇" [ref=e750] [cursor=pointer]:
+                  - text: 匠心之作
+                  - generic [ref=e751]: ✕
+                - generic "点击添加/移除此词汇" [ref=e752] [cursor=pointer]:
+                  - text: 解锁美丽
+                  - generic [ref=e753]: ✕
+                - generic "点击添加/移除此词汇" [ref=e754] [cursor=pointer]:
+                  - text: 焕新升级
+                  - generic [ref=e755]: ✕
+                - generic "点击添加/移除此词汇" [ref=e756] [cursor=pointer]:
+                  - text: 年度重磅
+                  - generic [ref=e757]: ✕
+                - generic "点击添加/移除此词汇" [ref=e758] [cursor=pointer]:
+                  - text: 王炸单品
+                  - generic [ref=e759]: ✕
+                - generic "点击添加/移除此词汇" [ref=e760] [cursor=pointer]:
+                  - text: 必buy清单
+                  - generic [ref=e761]: ✕
+                - generic "点击添加/移除此词汇" [ref=e762] [cursor=pointer]:
+                  - text: 高阶玩家
+                  - generic [ref=e763]: ✕
+                - generic "点击添加/移除此词汇" [ref=e764] [cursor=pointer]:
+                  - text: 一步到位
+                  - generic [ref=e765]: ✕
+                - generic "点击添加/移除此词汇" [ref=e766] [cursor=pointer]:
+                  - text: 颜值担当
+                  - generic [ref=e767]: ✕
+                - generic "点击添加/移除此词汇" [ref=e768] [cursor=pointer]:
+                  - text: 实力派
+                  - generic [ref=e769]: ✕
+                - generic "点击添加/移除此词汇" [ref=e770] [cursor=pointer]:
+                  - text: 闭眼入
+                  - generic [ref=e771]: ✕
+                - generic "点击添加/移除此词汇" [ref=e772] [cursor=pointer]:
+                  - text: 不买后悔
+                  - generic [ref=e773]: ✕
+            - generic [ref=e774]:
+              - generic [ref=e775]:
+                - generic [ref=e776]:
+                  - text: 促销文案
+                  - generic [ref=e777]: "18"
+                - generic [ref=e778]:
+                  - button "🔍 智能推荐" [ref=e779] [cursor=pointer]
+                  - button "添加词汇" [ref=e780] [cursor=pointer]
+                  - button "设为默认" [ref=e781] [cursor=pointer]
+                  - button "恢复" [ref=e782] [cursor=pointer]
+              - generic [ref=e783]:
+                - generic "点击添加/移除此词汇" [ref=e784] [cursor=pointer]:
+                  - text: 全场5折起
+                  - generic [ref=e785]: ✕
+                - generic "点击添加/移除此词汇" [ref=e786] [cursor=pointer]:
+                  - text: 买一送一
+                  - generic [ref=e787]: ✕
+                - generic "点击添加/移除此词汇" [ref=e788] [cursor=pointer]:
+                  - text: 第2件0元
+                  - generic [ref=e789]: ✕
+                - generic "点击添加/移除此词汇" [ref=e790] [cursor=pointer]:
+                  - text: 满300减50
+                  - generic [ref=e791]: ✕
+                - generic "点击添加/移除此词汇" [ref=e792] [cursor=pointer]:
+                  - text: 新人专享价
+                  - generic [ref=e793]: ✕
+                - generic "点击添加/移除此词汇" [ref=e794] [cursor=pointer]:
+                  - text: 限时24小时
+                  - generic [ref=e795]: ✕
+                - generic "点击添加/移除此词汇" [ref=e796] [cursor=pointer]:
+                  - text: 前100名半价
+                  - generic [ref=e797]: ✕
+                - generic "点击添加/移除此词汇" [ref=e798] [cursor=pointer]:
+                  - text: 领券立减100
+                  - generic [ref=e799]: ✕
+                - generic "点击添加/移除此词汇" [ref=e800] [cursor=pointer]:
+                  - text: 加购送赠品
+                  - generic [ref=e801]: ✕
+                - generic "点击添加/移除此词汇" [ref=e802] [cursor=pointer]:
+                  - text: 第二件半价
+                  - generic [ref=e803]: ✕
+                - generic "点击添加/移除此词汇" [ref=e804] [cursor=pointer]:
+                  - text: 每日秒杀
+                  - generic [ref=e805]: ✕
+                - generic "点击添加/移除此词汇" [ref=e806] [cursor=pointer]:
+                  - text: 拼团更优惠
+                  - generic [ref=e807]: ✕
+                - generic "点击添加/移除此词汇" [ref=e808] [cursor=pointer]:
+                  - text: 会员专享折扣
+                  - generic [ref=e809]: ✕
+                - generic "点击添加/移除此词汇" [ref=e810] [cursor=pointer]:
+                  - text: 清仓一口价
+                  - generic [ref=e811]: ✕
+                - generic "点击添加/移除此词汇" [ref=e812] [cursor=pointer]:
+                  - text: 首单包邮
+                  - generic [ref=e813]: ✕
+                - generic "点击添加/移除此词汇" [ref=e814] [cursor=pointer]:
+                  - text: 付定金翻倍
+                  - generic [ref=e815]: ✕
+                - generic "点击添加/移除此词汇" [ref=e816] [cursor=pointer]:
+                  - text: 下单抽免单
+                  - generic [ref=e817]: ✕
+                - generic "点击添加/移除此词汇" [ref=e818] [cursor=pointer]:
+                  - text: 集卡换好礼
+                  - generic [ref=e819]: ✕
+            - generic [ref=e820]:
+              - generic [ref=e821]:
+                - generic [ref=e822]:
+                  - text: 后期
+                  - generic [ref=e823]: "18"
+                - generic [ref=e824]:
+                  - button "🔍 智能推荐" [ref=e825] [cursor=pointer]
+                  - button "添加词汇" [ref=e826] [cursor=pointer]
+                  - button "设为默认" [ref=e827] [cursor=pointer]
+                  - button "恢复" [ref=e828] [cursor=pointer]
+              - generic [ref=e829]:
+                - generic "点击添加/移除此词汇" [ref=e830] [cursor=pointer]:
+                  - text: 高对比度
+                  - generic [ref=e831]: ✕
+                - generic "点击添加/移除此词汇" [ref=e832] [cursor=pointer]:
+                  - text: 低饱和度
+                  - generic [ref=e833]: ✕
+                - generic "点击添加/移除此词汇" [ref=e834] [cursor=pointer]:
+                  - text: 电影色调
+                  - generic [ref=e835]: ✕
+                - generic "点击添加/移除此词汇" [ref=e836] [cursor=pointer]:
+                  - text: 青橙色调
+                  - generic [ref=e837]: ✕
+                - generic "点击添加/移除此词汇" [ref=e838] [cursor=pointer]:
+                  - text: 赛博朋克调色
+                  - generic [ref=e839]: ✕
+                - generic "点击添加/移除此词汇" [ref=e840] [cursor=pointer]:
+                  - text: 奶油暖色调
+                  - generic [ref=e841]: ✕
+                - generic "点击添加/移除此词汇" [ref=e842] [cursor=pointer]:
+                  - text: 暗角效果
+                  - generic [ref=e843]: ✕
+                - generic "点击添加/移除此词汇" [ref=e844] [cursor=pointer]:
+                  - text: 颗粒胶片感
+                  - generic [ref=e845]: ✕
+                - generic "点击添加/移除此词汇" [ref=e846] [cursor=pointer]:
+                  - text: 清新通透调色
+                  - generic [ref=e847]: ✕
+                - generic "点击添加/移除此词汇" [ref=e848] [cursor=pointer]:
+                  - text: 高级灰调
+                  - generic [ref=e849]: ✕
+                - generic "点击添加/移除此词汇" [ref=e850] [cursor=pointer]:
+                  - text: 色彩分级
+                  - generic [ref=e851]: ✕
+                - generic "点击添加/移除此词汇" [ref=e852] [cursor=pointer]:
+                  - text: 柔光滤镜
+                  - generic [ref=e853]: ✕
+                - generic "点击添加/移除此词汇" [ref=e854] [cursor=pointer]:
+                  - text: 锐化增强
+                  - generic [ref=e855]: ✕
+                - generic "点击添加/移除此词汇" [ref=e856] [cursor=pointer]:
+                  - text: 暗部提亮
+                  - generic [ref=e857]: ✕
+                - generic "点击添加/移除此词汇" [ref=e858] [cursor=pointer]:
+                  - text: 高光压缩
+                  - generic [ref=e859]: ✕
+                - generic "点击添加/移除此词汇" [ref=e860] [cursor=pointer]:
+                  - text: 朦胧柔焦
+                  - generic [ref=e861]: ✕
+                - generic "点击添加/移除此词汇" [ref=e862] [cursor=pointer]:
+                  - text: 黑白单色
+                  - generic [ref=e863]: ✕
+                - generic "点击添加/移除此词汇" [ref=e864] [cursor=pointer]:
+                  - text: 复古褪色
+                  - generic [ref=e865]: ✕
+            - generic [ref=e866]:
+              - generic [ref=e867]:
+                - generic [ref=e868]:
+                  - text: 负面提示词
+                  - generic [ref=e869]: "22"
+                - generic [ref=e870]:
+                  - button "🔍 智能推荐" [ref=e871] [cursor=pointer]
+                  - button "添加词汇" [ref=e872] [cursor=pointer]
+                  - button "设为默认" [ref=e873] [cursor=pointer]
+                  - button "恢复" [ref=e874] [cursor=pointer]
+              - generic [ref=e875]:
+                - generic "点击添加/移除此词汇" [ref=e876] [cursor=pointer]:
+                  - text: 模糊
+                  - generic [ref=e877]: ✕
+                - generic "点击添加/移除此词汇" [ref=e878] [cursor=pointer]:
+                  - text: 变形
+                  - generic [ref=e879]: ✕
+                - generic "点击添加/移除此词汇" [ref=e880] [cursor=pointer]:
+                  - text: 扭曲
+                  - generic [ref=e881]: ✕
+                - generic "点击添加/移除此词汇" [ref=e882] [cursor=pointer]:
+                  - text: 多指
+                  - generic [ref=e883]: ✕
+                - generic "点击添加/移除此词汇" [ref=e884] [cursor=pointer]:
+                  - text: 缺指
+                  - generic [ref=e885]: ✕
+                - generic "点击添加/移除此词汇" [ref=e886] [cursor=pointer]:
+                  - text: 低画质
+                  - generic [ref=e887]: ✕
+                - generic "点击添加/移除此词汇" [ref=e888] [cursor=pointer]:
+                  - text: 水印
+                  - generic [ref=e889]: ✕
+                - generic "点击添加/移除此词汇" [ref=e890] [cursor=pointer]:
+                  - text: 文字错误
+                  - generic [ref=e891]: ✕
+                - generic "点击添加/移除此词汇" [ref=e892] [cursor=pointer]:
+                  - text: 噪点
+                  - generic [ref=e893]: ✕
+                - generic "点击添加/移除此词汇" [ref=e894] [cursor=pointer]:
+                  - text: 压缩伪影
+                  - generic [ref=e895]: ✕
+                - generic "点击添加/移除此词汇" [ref=e896] [cursor=pointer]:
+                  - text: 过曝
+                  - generic [ref=e897]: ✕
+                - generic "点击添加/移除此词汇" [ref=e898] [cursor=pointer]:
+                  - text: 欠曝
+                  - generic [ref=e899]: ✕
+                - generic "点击添加/移除此词汇" [ref=e900] [cursor=pointer]:
+                  - text: 色彩偏移
+                  - generic [ref=e901]: ✕
+                - generic "点击添加/移除此词汇" [ref=e902] [cursor=pointer]:
+                  - text: 不协调比例
+                  - generic [ref=e903]: ✕
+                - generic "点击添加/移除此词汇" [ref=e904] [cursor=pointer]:
+                  - text: 解剖结构错误
+                  - generic [ref=e905]: ✕
+                - generic "点击添加/移除此词汇" [ref=e906] [cursor=pointer]:
+                  - text: 杂乱背景
+                  - generic [ref=e907]: ✕
+                - generic "点击添加/移除此词汇" [ref=e908] [cursor=pointer]:
+                  - text: 重复物体
+                  - generic [ref=e909]: ✕
+                - generic "点击添加/移除此词汇" [ref=e910] [cursor=pointer]:
+                  - text: 怪异人脸
+                  - generic [ref=e911]: ✕
+                - generic "点击添加/移除此词汇" [ref=e912] [cursor=pointer]:
+                  - text: 像素化
+                  - generic [ref=e913]: ✕
+                - generic "点击添加/移除此词汇" [ref=e914] [cursor=pointer]:
+                  - text: JPEG artifacts
+                  - generic [ref=e915]: ✕
+                - generic "点击添加/移除此词汇" [ref=e916] [cursor=pointer]:
+                  - text: 低分辨率纹理
+                  - generic [ref=e917]: ✕
+                - generic "点击添加/移除此词汇" [ref=e918] [cursor=pointer]:
+                  - text: 比例失衡
+                  - generic [ref=e919]: ✕
+        - generic [ref=e920]:
+          - heading "尺寸管理" [level=2] [ref=e922]
+          - generic [ref=e923]:
+            - generic [ref=e924]:
+              - generic "双击编辑名称" [ref=e925] [cursor=pointer]:
+                - text: 聚福宝
+                - generic "删除此分类" [ref=e926]: ✕
+              - generic "双击编辑名称" [ref=e927] [cursor=pointer]:
+                - text: 比例
+                - generic "删除此分类" [ref=e928]: ✕
+              - generic [ref=e929]: 单位：像素
+            - generic [ref=e930]:
+              - button "常规尺寸 710×280" [ref=e931] [cursor=pointer]:
+                - generic [ref=e932]: 常规尺寸
+                - generic [ref=e933]: 710×280
+              - button "礼包尺寸 710×320" [ref=e934] [cursor=pointer]:
+                - generic [ref=e935]: 礼包尺寸
+                - generic [ref=e936]: 710×320
+              - button "通栏尺寸 750×420" [ref=e937] [cursor=pointer]:
+                - generic [ref=e938]: 通栏尺寸
+                - generic [ref=e939]: 750×420
+              - button "三拼大图尺寸 345×520" [ref=e940] [cursor=pointer]:
+                - generic [ref=e941]: 三拼大图尺寸
+                - generic [ref=e942]: 345×520
+              - button "三拼小图尺寸 345×250" [ref=e943] [cursor=pointer]:
+                - generic [ref=e944]: 三拼小图尺寸
+                - generic [ref=e945]: 345×250
+            - generic [ref=e946]:
+              - spinbutton [ref=e947]
+              - generic [ref=e948]: ×
+              - spinbutton [ref=e949]
+              - button "使用" [ref=e950] [cursor=pointer]
+        - generic [ref=e951]:
+          - heading "标题排版" [level=2] [ref=e953]
+          - generic [ref=e954]:
+            - generic [ref=e955]: 排版风格
+            - generic [ref=e956]:
+              - generic [ref=e957] [cursor=pointer]:
+                - generic [ref=e958]: 横幅式
+                - generic [ref=e959]: 顶部居中 + 底条衬托
+              - generic [ref=e960] [cursor=pointer]:
+                - generic [ref=e961]: 海报式
+                - generic [ref=e962]: 侧边大标题 + 底标
+              - generic [ref=e963] [cursor=pointer]:
+                - generic [ref=e964]: 角标式
+                - generic [ref=e965]: 左上标签 + 右下角标
+              - generic [ref=e966] [cursor=pointer]:
+                - generic [ref=e967]: 简约式
+                - generic [ref=e968]: 底部居中 + 纤细字体
+              - generic [ref=e969] [cursor=pointer]:
+                - generic [ref=e970]: 竖排式
+                - generic [ref=e971]: 竖排文字 + 侧边排列
+              - generic [ref=e972] [cursor=pointer]:
+                - generic [ref=e973]: 杂志式
+                - generic [ref=e974]: 大字压图 + 多层排版
+              - generic [ref=e975] [cursor=pointer]:
+                - generic [ref=e976]: 标签阵
+                - generic [ref=e977]: 多标签排列 + 错落布局
+              - generic [ref=e978] [cursor=pointer]:
+                - generic [ref=e979]: 环绕式
+                - generic [ref=e980]: 文字环绕主体排列
+            - generic [ref=e981]: 细节配置
+            - generic [ref=e982]:
+              - generic [ref=e983]:
+                - generic [ref=e984]: 位置
+                - combobox [ref=e985] [cursor=pointer]:
+                  - option "顶部居中" [selected]
+                  - option "顶部左侧（与当前风格不兼容）" [disabled]
+                  - option "中部横排（与当前风格不兼容）" [disabled]
+                  - option "底部居中（与当前风格不兼容）" [disabled]
+              - generic [ref=e986]:
+                - generic [ref=e987]: 副标题
+                - combobox [ref=e988] [cursor=pointer]:
+                  - option "主标题下方" [selected]
+                  - option "右下角标签（与当前风格不兼容）" [disabled]
+                  - option "底部独立底条（与当前风格不兼容）" [disabled]
+                  - option "与主标题同行"
+              - generic [ref=e989]:
+                - generic [ref=e990]: 字号
+                - combobox [ref=e991] [cursor=pointer]:
+                  - option "大标题 + 小副标" [selected]
+                  - option "仅大标题（与当前风格不兼容）" [disabled]
+                  - option "等大字号"
+              - generic [ref=e992]:
+                - generic [ref=e993]: 配色
+                - combobox [ref=e994] [cursor=pointer]:
+                  - option "白字 + 深色底条" [selected]
+                  - option "跟随画面色调"
+                  - option "黑字 + 浅色背景"
+                  - option "金色渐变"
+            - generic [ref=e995]:
+              - generic [ref=e996]:
+                - generic [ref=e997]: 字体
+                - combobox [ref=e998] [cursor=pointer]:
+                  - option "粗体无衬线" [selected]
+                  - option "衬线体"
+                  - option "书法体（与当前风格不兼容）" [disabled]
+                  - option "手写体（与当前风格不兼容）" [disabled]
+                  - option "特粗黑体"
+                  - option "纤细优雅体（与当前风格不兼容）" [disabled]
+              - generic [ref=e999]:
+                - generic [ref=e1000]: 特效
+                - combobox [ref=e1001] [cursor=pointer]:
+                  - option "无特效" [selected]
+                  - option "文字描边"
+                  - option "投影效果"
+                  - option "外发光"
+                  - option "渐变填充"
+                  - option "浮雕效果"
+            - generic [ref=e1002]:
+              - checkbox "在提示词中包含排版指令" [checked] [ref=e1003] [cursor=pointer]
+              - generic [ref=e1004] [cursor=pointer]: 在提示词中包含排版指令
+            - generic [ref=e1005]: 提示词预览 请先在词库中选择广告标题或促销文案
+      - generic [ref=e1006]:
+        - generic [ref=e1008] [cursor=pointer]:
+          - heading "公式管理" [level=2] [ref=e1009]
+          - generic [ref=e1010]:
+            - button "版本记录" [ref=e1011]
+            - button "+ 添加公式" [ref=e1012]
+            - generic [ref=e1013]: ▼
+        - generic [ref=e1014]:
+          - generic [ref=e1015]:
+            - heading "结果输出" [level=2] [ref=e1016]
+            - combobox [ref=e1017] [cursor=pointer]:
+              - option "-- 选择公式 --"
+              - option "电商广告设计公式" [selected]
+              - option "图标设计公式"
+              - option "创意海报设计公式"
+              - option "Logo设计公式"
+              - option "人像写真公式"
+              - option "封面包装设计公式"
+          - generic [ref=e1018]:
+            - generic [ref=e1019]: "{{广告背景}}，{{广告氛围}}，{{主要内容}}，{{展示状态}}，{{场景}}，{{风格}}，{{色彩}}，{{质感}}，{{光影}}，{{构图}}，{{画质}}，{{广告标题}}，{{促销文案}}，{{后期}}，{{负面提示词}}"
+            - textbox "选择公式后，在左侧词库中选词即可自动生成广告设计提示词..." [ref=e1020]
+            - generic [ref=e1021]:
+              - button "复制到剪贴板" [ref=e1022] [cursor=pointer]
+              - button "填入优化中" [ref=e1023] [cursor=pointer]
+              - button "保存到历史" [ref=e1024] [cursor=pointer]
+              - button "清空选择" [ref=e1025] [cursor=pointer]
+        - generic [ref=e1026]:
+          - heading "模型提示词优化" [level=2] [ref=e1028]
+          - generic [ref=e1029]:
+            - paragraph [ref=e1030]: 点击上方「填入优化中」按钮，将生成的提示词送入优化管道，一键为所有模型生成定向优化结果。
+            - generic [ref=e1031]:
+              - button "万相 阿里" [ref=e1032] [cursor=pointer]:
+                - text: 万相
+                - generic [ref=e1033]: 阿里
+              - button "Seedream 字节" [ref=e1034] [cursor=pointer]:
+                - text: Seedream
+                - generic [ref=e1035]: 字节
+              - button "灵动图像 网易" [ref=e1036] [cursor=pointer]:
+                - text: 灵动图像
+                - generic [ref=e1037]: 网易
+              - button "千问图像 阿里" [ref=e1038] [cursor=pointer]:
+                - text: 千问图像
+                - generic [ref=e1039]: 阿里
+              - button "Z Image Turbo 高速" [ref=e1040] [cursor=pointer]:
+                - text: Z Image Turbo
+                - generic [ref=e1041]: 高速
+              - button "豆包 字节" [ref=e1042] [cursor=pointer]:
+                - text: 豆包
+                - generic [ref=e1043]: 字节
+            - paragraph [ref=e1046]: 请选择上方词库后，再点击模型查看优化结果
+        - generic [ref=e1047]:
+          - generic [ref=e1049]: 模型官方平台
+          - generic [ref=e1050]:
+            - link "万相AI" [ref=e1051] [cursor=pointer]:
+              - /url: https://wanxiang.aliyun.com/
+            - link "即梦AI" [ref=e1052] [cursor=pointer]:
+              - /url: https://jimeng.jianying.com/ai-tool/home
+            - link "灵动AI" [ref=e1053] [cursor=pointer]:
+              - /url: https://www.redoon.cn/redoonlogin
+            - link "千问AI" [ref=e1054] [cursor=pointer]:
+              - /url: https://tongyi.aliyun.com/
+            - link "Z Image" [ref=e1055] [cursor=pointer]:
+              - /url: https://zimage.design/zh/
+            - link "稿定AI" [ref=e1056] [cursor=pointer]:
+              - /url: https://www.gaoding.art/
+            - link "豆包AI" [ref=e1057] [cursor=pointer]:
+              - /url: https://www.doubao.com/chat/
+            - link "Dola AI" [ref=e1058] [cursor=pointer]:
+              - /url: https://www.dola.com/chat
+        - generic [ref=e1059] [cursor=pointer]:
+          - generic [ref=e1060]:
+            - generic [ref=e1061]: 历史记录
+            - generic [ref=e1062]: "0"
+          - generic [ref=e1063]: ▼

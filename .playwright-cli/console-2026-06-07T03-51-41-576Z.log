@@ -1,0 +1,22 @@
+[    1554ms] [LOG] [Init] 开始初始化，连接 Supabase... @ http://localhost:8080/app.js:5724
+[    1554ms] [LOG] [Supabase] SDK 已检测到，创建客户端... @ http://localhost:8080/app.js:37
+[    1560ms] [LOG] [Auth] 已登出 @ http://localhost:8080/app.js:158
+[    1560ms] [LOG] [Supabase] ✅ 云端存储已就绪 @ http://localhost:8080/app.js:86
+[    1560ms] [LOG] [Init] Supabase 初始化结果: true 用户: 未登录 @ http://localhost:8080/app.js:5726
+[    1560ms] [LOG] [Auth] 已登出 @ http://localhost:8080/app.js:158
+[    1560ms] [LOG] [Init] 版本升级: 首次 → v20，执行数据迁移... @ http://localhost:8080/app.js:5734
+[    1560ms] [LOG] [Init] 未登录或云端不可用，使用本地数据 @ http://localhost:8080/app.js:5775
+[    1575ms] [LOG] [Init] ⚠️ 使用本地存储模式，数据不会跨设备同步 @ http://localhost:8080/app.js:5825
+[    1601ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/index.html:0
+[    1601ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/index.html:0
+[    1826ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8080/favicon.ico:0
+[   64884ms] [LOG] [Init] 开始初始化，连接 Supabase... @ http://localhost:8080/app.js:5724
+[   64884ms] [LOG] [Supabase] SDK 已检测到，创建客户端... @ http://localhost:8080/app.js:37
+[   64885ms] [LOG] [Auth] 已登出 @ http://localhost:8080/app.js:158
+[   64885ms] [LOG] [Supabase] ✅ 云端存储已就绪 @ http://localhost:8080/app.js:86
+[   64885ms] [LOG] [Init] Supabase 初始化结果: true 用户: 未登录 @ http://localhost:8080/app.js:5726
+[   64885ms] [LOG] [Auth] 已登出 @ http://localhost:8080/app.js:158
+[   64885ms] [LOG] [Init] 未登录或云端不可用，使用本地数据 @ http://localhost:8080/app.js:5775
+[   64891ms] [LOG] [Init] ⚠️ 使用本地存储模式，数据不会跨设备同步 @ http://localhost:8080/app.js:5825
+[   64910ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/index.html:0
+[   64910ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/index.html:0

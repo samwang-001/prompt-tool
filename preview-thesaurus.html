@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电商物品分层词库预览</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        min-height: 100vh;
+        padding: 2rem;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+        background: linear-gradient(135deg, #818cf8, #c084fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-bottom: 2rem;
+    }
+    .category-card {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(71, 85, 105, 0.3);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .category-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .category-name .icon { font-size: 1.3rem; }
+    .badge {
+        font-size: 0.7rem;
+        background: rgba(99, 102, 241, 0.2);
+        color: #a5b4fc;
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+        font-weight: 500;
+    }
+    .words-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+    /* 父词标签 */
+    .word-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.35rem 0.7rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        border: 1px solid rgba(71, 85, 105, 0.3);
+        background: rgba(51, 65, 85, 0.4);
+        color: #cbd5e1;
+        cursor: default;
+        transition: all 0.15s;
+    }
+    .word-tag.word-parent {
+        border-color: rgba(129, 140, 248, 0.35);
+        background: rgba(99, 102, 241, 0.08);
+        color: #c7d2fe;
+    }
+    .expand-arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px; height: 16px;
+        font-size: 0.5rem;
+        color: rgba(148, 163, 184, 0.5);
+        border-radius: 3px;
+        transition: all 0.2s;
+    }
+    .expand-arrow:hover {
+        color: #a5b4fc;
+        background: rgba(99, 102, 241, 0.15);
+    }
+    /* 子词汇面板 */
+    .word-children-panel {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        padding: 0.35rem 0.5rem;
+        border: 1px dashed rgba(99, 102, 241, 0.15);
+        border-radius: 6px;
+        background: rgba(99, 102, 241, 0.03);
+        margin-left: 0.2rem;
+    }
+    .word-tag.word-child {
+        font-size: 0.72rem;
+        padding: 0.22rem 0.55rem;
+        background: rgba(99, 102, 241, 0.05);
+        border-color: rgba(99, 102, 241, 0.15);
+        color: rgba(167, 139, 250, 0.7);
+    }
+    /* 统计条 */
+    .stats-bar {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+    }
+    .stat-item {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(71, 85, 105, 0.3);
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+    }
+    .stat-item strong {
+        color: #a5b4fc;
+        font-size: 1.1rem;
+    }
+    /* 图例 */
+    .legend {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+    .legend-item { display: flex; align-items: center; gap: 0.35rem; }
+    .legend-dot {
+        width: 8px; height: 8px;
+        border-radius: 2px;
+    }
+    .legend-dot.parent { background: rgba(99, 102, 241, 0.5); }
+    .legend-dot.child { background: rgba(99, 102, 241, 0.2); border: 1px dashed rgba(99, 102, 241, 0.2); }
+    .legend-dot.flat { background: rgba(51, 65, 85, 0.6); border: 1px solid rgba(71, 85, 105, 0.3); }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>🛍️ 电商物品分层词库预览</h1>
+    <p class="subtitle">「主要内容」分类 — 6大品类 × N个细分商品，可层层展开选择</p>
+
+    <div class="legend">
+        <div class="legend-item"><span class="legend-dot parent"></span> 品类（父词）— 点击▼展开子商品</div>
+        <div class="legend-item"><span class="legend-dot child"></span> 商品（子词）— 可独立选中</div>
+        <div class="legend-item"><span class="legend-dot flat"></span> 独立词 — 无子分类</div>
+    </div>
+
+    <div class="stats-bar" id="statsBar"></div>
+    <div id="categoriesContainer"></div>
+</div>
+
+<script>
+// ============ 电商物品分层词库设计 ============
+const thesaurusDesign = {
+    '主要内容': [
+        // ---- 美妆个护 ----
+        {
+            text: '美妆个护',
+            children: [
+                '口红', '唇釉', '粉底液', '气垫', '散粉', '眼影盘', '眼线笔', '睫毛膏',
+                '腮红', '高光', '修容', '眉笔', '妆前乳', '隔离霜', '卸妆油', '化妆刷套装',
+                '美妆蛋', '面膜', '精华液', '面霜', '爽肤水', '乳液', '防晒霜', '洗面奶',
+                '护手霜', '身体乳', '洗发水', '护发素', '沐浴露', '磨砂膏'
+            ]
+        },
+        {
+            text: '香水香氛',
+            children: [
+                '花香调香水', '木质调香水', '柑橘调香水', '东方调香水', '果香调香水',
+                '香水小样套装', '香薰蜡烛', '无火香薰', '车载香薰', '衣物香氛喷雾',
+                '固体香膏', '香薰机', '精油套装'
+            ]
+        },
+
+        // ---- 服饰鞋包 ----
+        {
+            text: '女装',
+            children: [
+                '连衣裙', '半身裙', 'T恤', '衬衫', '卫衣', '毛衣', '针织衫', '风衣',
+                '西装外套', '牛仔外套', '羽绒服', '大衣', '吊带', '阔腿裤', '牛仔裤',
+                '休闲裤', '短裤', '瑜伽裤', '家居服', '旗袍'
+            ]
+        },
+        {
+            text: '男装',
+            children: [
+                'T恤', 'Polo衫', '衬衫', '卫衣', '夹克', '西装', '风衣', '羽绒服',
+                '牛仔裤', '休闲裤', '西裤', '工装裤', '短裤', '运动套装', 'Polo连衣裙'
+            ]
+        },
+        {
+            text: '鞋靴',
+            children: [
+                '运动鞋', '跑鞋', '篮球鞋', '板鞋', '帆布鞋', '高跟鞋', '平底鞋',
+                '乐福鞋', '马丁靴', '切尔西靴', '雪地靴', '凉鞋', '拖鞋', '洞洞鞋',
+                '老爹鞋', '德训鞋', '玛丽珍鞋', '穆勒鞋'
+            ]
+        },
+        {
+            text: '箱包',
+            children: [
+                '托特包', '斜挎包', '链条包', '水桶包', '双肩包', '手提包', '腋下包',
+                '剑桥包', '马鞍包', '流浪包', '邮差包', '行李箱', '卡包', '钱包',
+                '帆布袋', '腰包', '胸包', '妈咪包'
+            ]
+        },
+        {
+            text: '配饰',
+            children: [
+                '项链', '耳环', '手链', '戒指', '手镯', '胸针', '发夹', '发箍',
+                '丝巾', '围巾', '帽子', '墨镜', '腰带', '手套', '袜子', '领带',
+                '袖扣', '头饰', 'Choker', '脚链'
+            ]
+        },
+
+        // ---- 珠宝腕表 ----
+        {
+            text: '珠宝首饰',
+            children: [
+                '钻石项链', '珍珠耳环', '黄金手镯', '铂金戒指', '翡翠吊坠', '彩宝戒指',
+                'K金链', '银饰套装', '婚戒对戒', '情侣手链', '生肖吊坠', '转运珠',
+                '锁骨链', '叠戴戒指', '开口镯', '锆石饰品'
+            ]
+        },
+        {
+            text: '腕表',
+            children: [
+                '机械表', '石英表', '智能手表', '运动腕表', '时装表', '商务表',
+                '潜水表', '飞行员表', '镂空表', '情侣对表', '复古表', '儿童手表',
+                '表带配件', '表盒'
+            ]
+        },
+
+        // ---- 3C数码 ----
+        {
+            text: '手机',
+            children: [
+                '旗舰手机', '折叠屏手机', '游戏手机', '拍照手机', '5G手机', '手机壳',
+                '手机膜', '充电器', '数据线', '充电宝', '手机支架', '手机挂绳'
+            ]
+        },
+        {
+            text: '电脑平板',
+            children: [
+                '笔记本电脑', '游戏本', '轻薄本', '平板电脑', 'iPad', '显示器',
+                '机械键盘', '鼠标', 'U盘', '移动硬盘', '扩展坞', '电脑包',
+                '屏幕膜', '散热支架'
+            ]
+        },
+        {
+            text: '影音数码',
+            children: [
+                '蓝牙耳机', '头戴耳机', '降噪耳机', 'TWS耳机', '蓝牙音箱', '智能音箱',
+                '相机', '微单', '拍立得', '无人机', '投影仪', 'Switch', 'PS5',
+                '游戏手柄', 'VR眼镜', '智能手环', '智能手表'
+            ]
+        },
+
+        // ---- 食品生鲜 ----
+        {
+            text: '零食糕点',
+            children: [
+                '薯片', '饼干', '巧克力', '糖果', '坚果', '肉脯', '果冻', '膨化食品',
+                '曲奇', '威化', '蛋糕', '面包', '蛋黄酥', '凤梨酥', '麻薯', '蛋卷',
+                '海苔', '辣条'
+            ]
+        },
+        {
+            text: '饮品冲调',
+            children: [
+                '咖啡豆', '挂耳咖啡', '速溶咖啡', '咖啡液', '茶叶', '茶包', '奶茶粉',
+                '可可粉', '蜂蜜', '麦片', '代餐粉', '蛋白粉', '胶原蛋白饮', '果蔬汁',
+                '气泡水', '椰子水', '酸奶', '乳酸菌'
+            ]
+        },
+        {
+            text: '水果生鲜',
+            children: [
+                '苹果', '香蕉', '橙子', '草莓', '蓝莓', '车厘子', '芒果', '榴莲',
+                '山竹', '牛油果', '猕猴桃', '葡萄', '水蜜桃', '荔枝', '龙眼', '柚子',
+                '柠檬', '百香果'
+            ]
+        },
+        {
+            text: '滋补保健',
+            children: [
+                '燕窝', '阿胶', '枸杞', '人参', '灵芝', '鱼油', '维生素', '钙片',
+                '褪黑素', '益生菌', '蛋白粉', '辅酶Q10', '叶黄素', '铁剂', '即食花胶',
+                '黑芝麻丸'
+            ]
+        },
+
+        // ---- 家居生活 ----
+        {
+            text: '家纺布艺',
+            children: [
+                '四件套', '蚕丝被', '羽绒被', '乳胶枕', '记忆枕', '凉席', '蚊帐',
+                '毛毯', '地毯', '窗帘', '靠垫', '抱枕', '沙发垫', '桌布', '浴巾',
+                '毛巾套装'
+            ]
+        },
+        {
+            text: '厨房用具',
+            children: [
+                '不粘锅', '炒锅', '汤锅', '蒸锅', '空气炸锅', '破壁机', '电饭煲',
+                '烤箱', '微波炉', '咖啡机', '榨汁机', '刀具套装', '砧板', '保温杯',
+                '焖烧杯', '饭盒', '餐具套装', '调味罐'
+            ]
+        },
+        {
+            text: '家居装饰',
+            children: [
+                '花瓶', '装饰画', '摆件', '香薰', '挂钟', '镜子', '台灯', '落地灯',
+                '收纳盒', '置物架', '相框', '绿植', '多肉', '花盆', '壁纸', '贴纸',
+                '门帘', '挂毯'
+            ]
+        },
+        {
+            text: '清洁日用',
+            children: [
+                '洗衣液', '洗洁精', '洗手液', '消毒液', '纸巾', '湿巾', '拖把',
+                '扫地机器人', '吸尘器', '垃圾桶', '保鲜袋', '垃圾袋', '收纳箱',
+                '衣架', '粘毛器', '除湿盒'
+            ]
+        },
+
+        // ---- 母婴宠物 ----
+        {
+            text: '母婴用品',
+            children: [
+                '纸尿裤', '奶粉', '奶瓶', '婴儿车', '安全座椅', '婴儿床', '爬行垫',
+                '早教玩具', '婴儿服装', '睡袋', '哺乳内衣', '吸奶器', '温奶器',
+                '辅食机', '婴儿湿巾', '护臀膏', '婴儿沐浴露', '儿童水杯'
+            ]
+        },
+        {
+            text: '宠物用品',
+            children: [
+                '猫粮', '狗粮', '猫砂', '宠物零食', '宠物玩具', '猫抓板', '猫爬架',
+                '狗窝', '猫窝', '宠物牵引绳', '宠物衣服', '宠物梳子', '宠物沐浴露',
+                '宠物食盆', '饮水机', '猫包', '航空箱', '猫砂盆'
+            ]
+        },
+
+        // ---- 独立词（不需子分类的） ----
+        '健身器材', '运动装备', '户外露营', '文具', '玩具', '文创礼品',
+        '鲜花绿植', '节日礼盒', '盲盒', '手办', '联名限定款', '季节限定品',
+        '明星同款', '新品首发'
+    ]
+};
+
+// ============ 渲染 ============
+function renderPreview() {
+    const container = document.getElementById('categoriesContainer');
+    const statsBar = document.getElementById('statsBar');
+
+    let totalParents = 0;
+    let totalChildren = 0;
+    let totalFlat = 0;
+
+    Object.entries(thesaurusDesign).forEach(([catName, words]) => {
+        words.forEach(w => {
+            if (typeof w === 'object' && w.children) {
+                totalParents++;
+                totalChildren += w.children.length;
+            } else {
+                totalFlat++;
+            }
+        });
+    });
+
+    statsBar.innerHTML = `
+        <div class="stat-item">📦 <strong>${totalParents}</strong> 品类（父词）</div>
+        <div class="stat-item">🏷️ <strong>${totalChildren}</strong> 具体商品（子词）</div>
+        <div class="stat-item">📌 <strong>${totalFlat}</strong> 独立词</div>
+        <div class="stat-item">📊 总计可选项 <strong>${totalParents + totalChildren + totalFlat}</strong></div>
+    `;
+
+    let html = '';
+    Object.entries(thesaurusDesign).forEach(([catName, words]) => {
+        const wordTags = words.map(w => renderWordTag(w)).join('');
+
+        html += `
+        <div class="category-card">
+            <div class="category-name">
+                <span class="icon">📋</span> ${catName}
+                <span class="badge">${words.length}项</span>
+            </div>
+            <div class="words-grid">${wordTags}</div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+
+    // 绑定展开事件
+    document.querySelectorAll('.expand-arrow').forEach(arrow => {
+        arrow.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const parent = this.closest('.word-tag');
+            const panel = parent.nextElementSibling;
+            if (panel && panel.classList.contains('word-children-panel')) {
+                const isHidden = panel.style.display === 'none';
+                panel.style.display = isHidden ? 'inline-flex' : 'none';
+                this.textContent = isHidden ? '▲' : '▼';
+            }
+        });
+    });
+}
+
+function renderWordTag(word) {
+    if (typeof word === 'object' && word.children) {
+        // 分层词：父词 + 子词汇面板
+        let html = `<span class="word-tag word-parent">
+            ${escapeHtml(word.text)}
+            <span class="expand-arrow" title="展开子商品">▼</span>
+        </span>`;
+        html += `<span class="word-children-panel" style="display:none;">`;
+        word.children.forEach(child => {
+            html += `<span class="word-tag word-child">${escapeHtml(child)}</span>`;
+        });
+        html += `</span>`;
+        return html;
+    }
+    // 普通词
+    return `<span class="word-tag">${escapeHtml(String(word))}</span>`;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+renderPreview();
+</script>
+</body>
+</html>

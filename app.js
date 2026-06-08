@@ -3,6 +3,12 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpc2hteW5pY2ZydWVlbXBzYnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDczMTksImV4cCI6MjA5NjE4MzMxOX0.tNxiKnRADMDKJaDYaFpm6gTEg_Nv8bI8Ql05SdGsST4';
         // ⚠️ 替换为你的管理员邮箱
         const ADMIN_EMAIL = 'hvho1982@163.com';
+        // 应用地址（邮箱验证回调用）
+        const APP_URL = 'https://www.prompt-tool.dedyn.io';
+        // Supabase Edge Function 地址（本地开发走代理避免 CORS）
+        const MANAGE_USERS_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? '/api/manage-users'
+            : 'https://aishmynicfrueempsbun.supabase.co/functions/v1/manage-users';
 
         let supabaseClient = null;
         let cloudReady = false;
@@ -11,20 +17,24 @@
         // 认证状态
         let currentUser = null;       // { id, email, user_metadata }
         let isAdmin = false;          // 是否为管理员
+        let _userWhitelist = false;   // 当前用户是否是白名单用户
         let adminViewUserId = null;   // 管理员正在查看的用户ID（null=看自己的数据）
         let _adminUsersCache = null;  // 管理员面板用户列表缓存
         let _dataGen = 0;             // 数据代数计数器，切换用户时递增，防止异步保存覆盖
         let authTab = 'login';        // 当前认证标签页
+        let _currentAdminTab = 'users'; // 管理员面板当前标签页
+        let _confirmCallback = null;  // 确认弹窗回调
+        let _adminFilterText = '';    // 用户列表筛选文本
 
         // 初始化 Supabase 客户端
         function initSupabase() {
             if (cloudInitPromise) return cloudInitPromise;
             cloudInitPromise = (async () => {
                 try {
-                    // 等待 SDK 加载（最多等 3 秒）
+                    // 等待 SDK 加载（最多等 10 秒）
                     if (!window.supabase) {
                         let waited = 0;
-                        while (!window.supabase && waited < 30) {
+                        while (!window.supabase && waited < 100) {
                             await new Promise(r => setTimeout(r, 100));
                             waited++;
                         }
@@ -41,18 +51,47 @@
                         global: { headers: { 'x-client-info': 'prompt-tool/2.0' } }
                     });
 
-                    // 监听认证状态变化
-                    supabaseClient.auth.onAuthStateChange((event, session) => {
+                    // 监听认证状态变化（回调中的异步操作各自处理超时，不影响初始化流程）
+                    supabaseClient.auth.onAuthStateChange(async (event, session) => {
                         if (event === 'SIGNED_IN' && session) {
+                            let blocked = false;
+                            try {
+                                const blockResult = await Promise.race([
+                                    checkUserBlocked(session.user.id),
+                                    new Promise(r => setTimeout(() => r(false), 3000))
+                                ]);
+                                blocked = blockResult;
+                            } catch { blocked = false; }
+                            if (blocked) {
+                                await supabaseClient.auth.signOut();
+                                updateAuthUI(null);
+                                showToast('账户已被限制访问', 'error');
+                                return;
+                            }
+                            const wasLoggedOut = !currentUser;
                             updateAuthUI(session.user);
+                            if (cloudReady && wasLoggedOut) {
+                                reloadCloudData();
+                                loadWhitelistApiKeys();
+                            }
                         } else if (event === 'SIGNED_OUT') {
                             updateAuthUI(null);
                         }
                     });
 
                     // 检查已有会话（尝试恢复登录状态）
-                    let { data: { session } } = await supabaseClient.auth.getSession();
-                    
+                    let session = null;
+                    try {
+                        const sessionResult = await Promise.race([
+                            supabaseClient.auth.getSession(),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), 5000))
+                        ]);
+                        session = sessionResult?.data?.session || null;
+                    } catch (timeoutErr) {
+                        console.warn('[Supabase] getSession 超时，跳过会话恢复:', timeoutErr.message);
+                        session = null;
+                    }
+
                     // 如果 getSession 返回空，尝试从 localStorage 恢复并刷新
                     if (!session) {
                         try {
@@ -61,13 +100,15 @@
                                 const parsed = JSON.parse(stored);
                                 if (parsed && parsed.refresh_token) {
                                     console.log('[Supabase] 发现本地存储的会话，尝试刷新...');
-                                    const { data: refreshData, error: refreshErr } = await supabaseClient.auth.refreshSession({ refresh_token: parsed.refresh_token });
-                                    if (!refreshErr && refreshData.session) {
-                                        session = refreshData.session;
+                                    const refreshResult = await Promise.race([
+                                        supabaseClient.auth.refreshSession({ refresh_token: parsed.refresh_token }),
+                                        new Promise((_, reject) => setTimeout(() => reject(new Error('refreshSession timeout')), 5000))
+                                    ]);
+                                    if (!refreshResult.error && refreshResult.data && refreshResult.data.session) {
+                                        session = refreshResult.data.session;
                                         console.log('[Supabase] ✅ 会话已恢复');
                                     } else {
-                                        console.warn('[Supabase] 会话刷新失败，需要重新登录:', refreshErr?.message);
-                                        // 清除过期的本地存储
+                                        console.warn('[Supabase] 会话刷新失败，需要重新登录:', refreshResult.error?.message);
                                         localStorage.removeItem('prompt-tool-auth');
                                     }
                                 }
@@ -76,13 +117,65 @@
                             console.warn('[Supabase] 会话恢复异常:', e.message);
                         }
                     }
-                    
+
                     if (session && session.user) {
-                        updateAuthUI(session.user);
+                        let blocked = false;
+                        try {
+                            const blockResult = await Promise.race([
+                                checkUserBlocked(session.user.id),
+                                new Promise(r => setTimeout(() => r(false), 3000))
+                            ]);
+                            blocked = blockResult;
+                        } catch { blocked = false; }
+                        if (blocked) {
+                            await supabaseClient.auth.signOut();
+                            updateAuthUI(null);
+                            session = null;
+                            showToast('账户已被限制访问', 'error');
+                        } else {
+                            updateAuthUI(session.user);
+                        }
                     } else {
-                        // 确保清除旧的登录状态
                         updateAuthUI(null);
                     }
+
+                    // 处理邮箱验证回调（从验证链接跳回）
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+                        const isVerified = urlParams.get('verified') === '1';
+                        const hasEmailToken = hashParams.get('type') === 'signup' || hashParams.get('type') === 'email_change';
+
+                        if (isVerified || hasEmailToken) {
+                            if (session && session.user) {
+                                console.log('[Auth] ✅ 邮箱验证成功，已自动登录');
+                                showToast('邮箱验证成功！已自动登录，数据同步中...', 'success');
+                                await reloadCloudData();
+                            } else if (hasEmailToken) {
+                                setTimeout(async () => {
+                                    try {
+                                        const s2Result = await Promise.race([
+                                            supabaseClient.auth.getSession(),
+                                            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+                                        ]);
+                                        const s2 = s2Result?.data?.session;
+                                        if (s2 && s2.user) {
+                                            updateAuthUI(s2.user);
+                                            showToast('邮箱验证成功！已自动登录，数据同步中...', 'success');
+                                            await reloadCloudData();
+                                        }
+                                    } catch (e) { console.warn('[Auth] 验证回调延迟恢复失败:', e.message); }
+                                }, 1000);
+                            }
+                            if (window.history && window.history.replaceState) {
+                                const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+                                window.history.replaceState({}, '', cleanUrl);
+                            }
+                        }
+                    } catch (cbErr) {
+                        console.warn('[Auth] 验证回调处理异常:', cbErr.message);
+                    }
+
                     cloudReady = true;
                     console.log('[Supabase] ✅ 云端存储已就绪');
                     updateCloudStatus(true);
@@ -100,15 +193,18 @@
 
 
         // 等待云端就绪（带超时）
-        async function waitForCloud(ms = 5000) {
+        async function waitForCloud(ms = 8000) {
             if (cloudReady) return true;
             try {
                 const result = await Promise.race([
                     initSupabase(),
-                    new Promise(r => setTimeout(() => r(false), ms))
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('waitForCloud timeout')), ms))
                 ]);
                 return result === true;
-            } catch {
+            } catch (e) {
+                console.warn('[Cloud] 初始化超时或失败:', e.message);
+                // 重置缓存，允许下次重试
+                cloudInitPromise = null;
                 return false;
             }
         }
@@ -118,6 +214,16 @@
             // 返回当前操作的用户ID：管理员查看其他用户时返回目标用户ID
             if (isAdmin && adminViewUserId) return adminViewUserId;
             return currentUser ? currentUser.id : null;
+        }
+
+        // 检查用户是否被拉黑
+        async function checkUserBlocked(userId) {
+            if (!userId || !supabaseClient) return false;
+            try {
+                const { data } = await supabaseClient.from('user_profiles')
+                    .select('status').eq('user_id', userId).maybeSingle();
+                return data?.status === 'blocked';
+            } catch { return false; }
         }
 
         function updateAuthUI(user) {
@@ -150,6 +256,7 @@
             } else {
                 currentUser = null;
                 isAdmin = false;
+                _userWhitelist = false;
                 adminViewUserId = null;
                 updateViewingBadge();
                 if (loginBtn) loginBtn.style.display = 'inline-flex';
@@ -202,6 +309,32 @@
             document.getElementById('authError').textContent = '';
         }
 
+        // 根据邮箱域名生成邮箱快捷跳转链接 HTML
+        function buildEmailVerifyHint(email) {
+            const emailDomain = (email || '').split('@')[1]?.toLowerCase() || '';
+            const mailUrls = {
+                'qq.com': 'https://mail.qq.com',
+                '163.com': 'https://mail.163.com',
+                '126.com': 'https://mail.126.com',
+                'gmail.com': 'https://mail.google.com',
+                'outlook.com': 'https://outlook.live.com',
+                'hotmail.com': 'https://outlook.live.com',
+                'live.com': 'https://outlook.live.com',
+                'sina.com': 'https://mail.sina.com.cn',
+                'sohu.com': 'https://mail.sohu.com',
+                'aliyun.com': 'https://mail.aliyun.com',
+                'foxmail.com': 'https://mail.qq.com',
+                'yeah.net': 'https://mail.163.com',
+                'icloud.com': 'https://www.icloud.com/mail',
+                'proton.me': 'https://mail.proton.me',
+                'protonmail.com': 'https://mail.proton.me',
+            };
+            const mailUrl = mailUrls[emailDomain] || '';
+            return mailUrl
+                ? `<a href="${mailUrl}" target="_blank" style="display:inline-block;padding:0.35rem 0.7rem;background:rgba(96,165,250,0.15);color:#60a5fa;border-radius:6px;text-decoration:none;font-size:0.78rem;margin-top:0.3rem;">📬 打开 ${emailDomain} 邮箱 →</a>`
+                : '<span style="font-size:0.72rem;color:var(--text-secondary);">请打开你的邮箱查收验证邮件</span>';
+        }
+
         async function doAuth() {
             const email = document.getElementById('authEmail').value.trim();
             const password = document.getElementById('authPassword').value;
@@ -230,22 +363,47 @@
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) {
                         if (error.message.includes('Invalid login')) errorEl.textContent = '邮箱或密码错误';
-                        else if (error.message.includes('Email not confirmed')) errorEl.textContent = '请先验证邮箱';
-                        else errorEl.textContent = error.message;
+                        else if (error.message.includes('Email not confirmed')) {
+                            const msgHtml = buildEmailVerifyHint(email);
+                            errorEl.innerHTML = `<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:0.75rem;text-align:left;"><p style="color:#fbbf24;margin:0 0 0.5rem;font-weight:700;">⚠️ 邮箱尚未验证</p><p style="color:var(--text-secondary);font-size:0.78rem;margin:0 0 0.5rem;">请查收发送至 <strong style="color:var(--text-primary);">${escapeHtml(email)}</strong> 的验证邮件（含垃圾邮件箱）并点击验证链接。</p>${msgHtml}</div>`;
+                        } else errorEl.textContent = error.message;
                     } else {
-                        // 显式设置用户状态（防止 onAuthStateChange 回调延迟导致 reloadCloudData 拿不到 currentUser）
+                        // 检查用户是否被拉黑
+                        const { data: profile } = await supabaseClient.from('user_profiles')
+                            .select('status, api_keys').eq('user_id', data.user.id).maybeSingle();
+                        
+                        if (profile && profile.status === 'blocked') {
+                            await supabaseClient.auth.signOut();
+                            updateAuthUI(null);
+                            errorEl.textContent = '您的账户已被管理员限制访问';
+                            showToast('账户已被限制访问，请联系管理员', 'error');
+                            btn.disabled = false;
+                            btn.textContent = '登录';
+                            return;
+                        }
+
+                        // 显式设置用户状态
                         updateAuthUI(data.user);
                         closeAuthModal();
                         showToast('登录成功！数据同步中...', 'success');
                         updateCloudStatus(true);
                         await reloadCloudData();
+
+                        // 白名单用户自动加载管理员 API Keys
+                        if (profile && profile.status === 'whitelist') {
+                            await loadWhitelistApiKeys();
+                        }
+                        
                         showToast('登录成功！数据已同步', 'success');
                     }
                 } else {
                     const { data, error } = await supabaseClient.auth.signUp({
                         email,
                         password,
-                        options: { data: { display_name: displayName || email.split('@')[0] } }
+                        options: {
+                            emailRedirectTo: APP_URL + '?verified=1',
+                            data: { display_name: displayName || email.split('@')[0] }
+                        }
                     });
                     if (error) {
                         if (error.message.includes('already registered')) errorEl.textContent = '该邮箱已注册，请直接登录';
@@ -254,9 +412,20 @@
                         if (data.user && data.user.identities && data.user.identities.length === 0) {
                             errorEl.textContent = '该邮箱已注册，请直接登录';
                         } else {
-                            // 如果开启了邮箱验证，提示用户查看邮箱
+                            const needConfirm = data.user?.email_confirmed_at === null && data.session === null;
                             errorEl.textContent = '';
-                            showToast('注册成功！请查收邮箱验证邮件。（如未开启验证，请直接登录）', 'success');
+                            if (needConfirm) {
+                                const msgHtml = buildEmailVerifyHint(email);
+                                errorEl.innerHTML = `
+                                    <div style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.35);border-radius:8px;padding:0.75rem;text-align:left;">
+                                        <p style="color:#34d399;margin:0 0 0.5rem;font-weight:700;">✅ 注册成功！需要验证邮箱</p>
+                                        <p style="color:var(--text-secondary);font-size:0.78rem;margin:0 0 0.5rem;">验证邮件已发送至 <strong style="color:var(--text-primary);">${escapeHtml(email)}</strong>，请查收（含垃圾邮件箱）并点击验证链接。</p>
+                                        ${msgHtml}
+                                    </div>
+                                `;
+                            } else {
+                                showToast('注册成功！已自动登录', 'success');
+                            }
                             switchAuthTab('login');
                             document.getElementById('authEmail').value = email;
                             document.getElementById('authPassword').value = '';
@@ -282,15 +451,132 @@
             showToast('已退出登录，使用本地数据', 'warning');
         }
 
-        // 管理员面板
+        // ==================== 管理员面板 ====================
+
+        // 调用 Edge Function 管理用户
+        async function callManageUsers(action, payload) {
+            const ok = await waitForCloud();
+            if (!ok) { showToast('云端连接失败', 'error'); return null; }
+
+            // 先刷新 session，防止 token 过期导致 Edge Function 403
+            try {
+                const refreshResult = await Promise.race([
+                    supabaseClient.auth.refreshSession(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('refreshSession timeout')), 8000))
+                ]);
+                if (refreshResult.error) {
+                    console.warn('[ManageUsers] 刷新 session 失败:', refreshResult.error.message);
+                } else if (refreshResult.data?.session) {
+                    console.log('[ManageUsers] session 已刷新');
+                }
+            } catch (refreshErr) {
+                console.warn('[ManageUsers] 刷新 session 超时:', refreshErr.message);
+            }
+
+            let session = null;
+            try {
+                const sessionResult = await Promise.race([
+                    supabaseClient.auth.getSession(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), 5000))
+                ]);
+                session = sessionResult?.data?.session || null;
+            } catch (timeoutErr) {
+                console.warn('[ManageUsers] getSession 超时:', timeoutErr.message);
+                showToast('会话验证超时，请刷新后重试', 'error');
+                return null;
+            }
+            if (!session) { showToast('请先登录', 'error'); return null; }
+
+            try {
+                const resp = await fetch(MANAGE_USERS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ action, payload }),
+                });
+                const result = await resp.json();
+                if (!resp.ok) {
+                    const errMsg = result.error || `HTTP ${resp.status}`;
+                    console.error('[ManageUsers] 请求失败:', resp.status, result);
+                    throw new Error(errMsg);
+                }
+                return result;
+            } catch (e) {
+                console.error('[ManageUsers] 异常:', e);
+                showToast('操作失败: ' + e.message, 'error');
+                // 将详细错误也写入状态区域（如果调用方有状态元素）
+                const statusEl = document.getElementById('apiKeysSyncStatus');
+                if (statusEl && action === 'sync_api_keys') {
+                    statusEl.innerHTML = `<span style="color:#f87171;">❌ 同步失败: ${e.message}</span>`;
+                }
+                return null;
+            }
+        }
+
+        // 确认弹窗
+        function showConfirm(message, callback) {
+            document.getElementById('confirmMessage').textContent = message;
+            _confirmCallback = callback;
+            const overlay = document.getElementById('confirmOverlay');
+            overlay.style.display = 'flex';
+            overlay.classList.add('active');
+        }
+        function closeConfirm() {
+            const overlay = document.getElementById('confirmOverlay');
+            overlay.classList.remove('active');
+            setTimeout(() => { overlay.style.display = 'none'; }, 200);
+            _confirmCallback = null;
+        }
+        function executeConfirm() {
+            if (_confirmCallback) _confirmCallback();
+            closeConfirm();
+        }
+
+        // 打开管理员面板
         async function openAdminPanel() {
             closeAllMenus();
             document.getElementById('adminPanelOverlay').classList.add('active');
+            _currentAdminTab = 'users';
+            resetAdminTabs();
             await loadAdminUsers();
+            await loadAdminApiKeysIntoForm();
         }
 
         function closeAdminPanel() {
             document.getElementById('adminPanelOverlay').classList.remove('active');
+            _adminFilterText = '';
+            _adminUsersCache = null;
+            const filterInput = document.getElementById('adminUserFilter');
+            if (filterInput) filterInput.value = '';
+        }
+
+        function resetAdminTabs() {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+            const tabBtn = document.querySelector(`.admin-tab[onclick*="${_currentAdminTab}"]`);
+            if (tabBtn) tabBtn.classList.add('active');
+            const tabContentId = _currentAdminTab === 'apikeys' ? 'adminTabApiKeys' : ('adminTab' + _currentAdminTab.charAt(0).toUpperCase() + _currentAdminTab.slice(1));
+            const tabContent = document.getElementById(tabContentId);
+            if (tabContent) tabContent.classList.add('active');
+        }
+
+        async function switchAdminTab(tab, btn) {
+            _currentAdminTab = tab;
+            resetAdminTabs();
+            if (tab === 'users') {
+                await loadAdminUsers();
+            } else if (tab === 'whitelist') {
+                await loadWhitelistList();
+            } else if (tab === 'apikeys') {
+                await loadAdminApiKeysIntoForm();
+            }
+        }
+
+        function filterAdminUsers() {
+            _adminFilterText = (document.getElementById('adminUserFilter')?.value || '').toLowerCase().trim();
+            renderAdminUserList();
         }
 
         async function loadAdminUsers() {
@@ -309,35 +595,81 @@
                 }
 
                 _adminUsersCache = data;
-                const currentUserId = currentUser.id;
-                const effectiveId = getEffectiveUserId();
-
-                listEl.innerHTML = data.map(u => {
-                    const isMe = u.user_id === currentUserId;
-                    const isViewing = u.user_id === effectiveId;
-                    return `
-                        <div class="admin-user-item${isViewing ? ' selected' : ''}" onclick="switchToUser('${u.user_id}')">
-                            <div class="admin-user-left">
-                                <div class="user-avatar" style="width:32px;height:32px;font-size:0.8rem;">${(u.email || 'U')[0].toUpperCase()}</div>
-                                <div>
-                                    <div class="admin-user-email">
-                                        ${escapeHtml(u.display_name || u.email || '未知用户')}
-                                        ${isMe ? '<span class="admin-current">（当前）</span>' : ''}
-                                        ${u.email === ADMIN_EMAIL ? '<span class="admin-badge">管理员</span>' : ''}
-                                    </div>
-                                    <div class="admin-user-meta">${escapeHtml(u.email || '')}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                renderAdminUserList();
             } catch (e) {
                 listEl.innerHTML = '<p style="color: var(--error); text-align: center;">出错: ' + e.message + '</p>';
             }
         }
 
-        async function switchToUser(userId) {
+        function renderAdminUserList() {
+            const listEl = document.getElementById('adminUserList');
+            if (!listEl || !_adminUsersCache) return;
+
+            const effectiveId = getEffectiveUserId();
+            const currentUserId = currentUser?.id;
+
+            let filtered = _adminUsersCache;
+            if (_adminFilterText) {
+                filtered = _adminUsersCache.filter(u =>
+                    (u.email || '').toLowerCase().includes(_adminFilterText) ||
+                    (u.display_name || '').toLowerCase().includes(_adminFilterText)
+                );
+            }
+
+            const countEl = document.getElementById('adminFilterCount');
+            if (countEl) countEl.textContent = `共 ${filtered.length} 人`;
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">' + (_adminFilterText ? '无匹配用户' : '暂无用户') + '</p>';
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(u => {
+                const isMe = u.user_id === currentUserId;
+                const isViewing = u.user_id === effectiveId;
+                const isBlocked = u.status === 'blocked';
+                const isWhitelist = u.status === 'whitelist';
+                const isAdminUser = u.email === ADMIN_EMAIL;
+                const statusText = isBlocked ? '已拉黑' : (isWhitelist ? '白名单' : '正常');
+                const statusClass = isBlocked ? 'status-blocked' : (isWhitelist ? 'status-whitelist' : 'status-active');
+
+                let actionsHtml = '';
+                if (!isMe && !isAdminUser) {
+                    if (isBlocked) {
+                        actionsHtml = `<button class="admin-btn-action" onclick="unblockUser('${u.user_id}')" title="解除拉黑">解除</button>`;
+                    } else if (isWhitelist) {
+                        actionsHtml = `<button class="admin-btn-action" onclick="removeWhitelistUser('${u.user_id}')" title="移出白名单">移出</button>`;
+                    } else {
+                        actionsHtml = `<button class="admin-btn-action" style="color:#60a5fa;border-color:rgba(96,165,250,0.3);" onclick="promoteToWhitelist('${u.user_id}','${escapeHtml(u.email || '')}')" title="添加白名单">加白</button>`;
+                        actionsHtml += `<button class="admin-btn-action warn" onclick="blockUser('${u.user_id}')" title="拉黑">拉黑</button>`;
+                    }
+                    actionsHtml += `<button class="admin-btn-action danger" onclick="deleteUser('${u.user_id}','${escapeHtml(u.email || '')}')" title="删除">删除</button>`;
+                }
+
+                return `
+                    <div class="admin-user-item${isViewing ? ' selected' : ''}${isBlocked ? ' blocked' : ''}">
+                        <div class="admin-user-left" onclick="switchToUser('${u.user_id}', event)">
+                            <div class="user-avatar" style="width:32px;height:32px;font-size:0.8rem;flex-shrink:0;">${(u.email || 'U')[0].toUpperCase()}</div>
+                            <div class="admin-user-info">
+                                <div class="admin-user-name">
+                                    ${escapeHtml(u.display_name || u.email || '未知用户')}
+                                    ${isMe ? '<span class="admin-current">（我）</span>' : ''}
+                                    ${isAdminUser ? '<span class="admin-badge">管理员</span>' : ''}
+                                    <span class="admin-user-status ${statusClass}">${statusText}</span>
+                                </div>
+                                <div class="admin-user-email">${escapeHtml(u.email || '')}</div>
+                            </div>
+                        </div>
+                        ${actionsHtml ? `<div class="admin-user-actions">${actionsHtml}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function switchToUser(userId, ev) {
             if (!isAdmin) return;
+            // 如果点击的是操作按钮区域，不执行切换（防止点击拉黑/删除/加白时关闭面板）
+            if (ev && ev.target.closest('.admin-user-actions')) return;
             // 选自己等同于切换回自己
             adminViewUserId = (userId === currentUser?.id) ? null : userId;
             closeAdminPanel();
@@ -361,10 +693,6 @@
             fedPromptHash = '';
             currentModelId = null;
 
-            // 注意：不提前清除 localStorage！
-            // getFormulasAsync 成功后会自己覆盖 localStorage 为新用户的数据
-            // 如果 Supabase 失败，保留旧的 localStorage 至少不会丢失数据
-
             const targetUser = userId === currentUser.id ? '自己' : userId.substring(0, 8) + '...';
             showToast('已切换到用户: ' + targetUser + '，加载数据中...', 'success');
 
@@ -374,13 +702,8 @@
                 const thesaurus = await getThesaurusAsync();
                 if (gen !== _dataGen) return;
                 console.log('[Admin] 切换用户加载完成:', targetUser, '公式:', formulas.length, '词库:', thesaurus.length);
-                // 目标用户无数据时，初始化默认数据
-                if (formulas.length === 0) {
-                    saveFormulas(getDefaultFormulas());
-                }
-                if (thesaurus.length === 0) {
-                    saveThesaurus(getDefaultThesaurus());
-                }
+                if (formulas.length === 0) { saveFormulas(getDefaultFormulas()); }
+                if (thesaurus.length === 0) { saveThesaurus(getDefaultThesaurus()); }
             } catch (e) { console.warn('切换用户加载失败:', e); }
 
             if (gen !== _dataGen) return;
@@ -388,6 +711,274 @@
             updateFormulaSelect();
             document.getElementById('resultTextarea').value = '';
             invalidateModelCache();
+        }
+
+        // 拉黑用户
+        async function blockUser(userId) {
+            const result = await callManageUsers('block_user', { user_id: userId });
+            if (result) {
+                // 刷新列表
+                await loadAdminUsers();
+                // 如果正在查看该用户的数据，切换回自己
+                if (adminViewUserId === userId) {
+                    adminViewUserId = null;
+                    updateViewingBadge();
+                }
+            }
+        }
+
+        // 解除拉黑
+        async function unblockUser(userId) {
+            const result = await callManageUsers('unblock_user', { user_id: userId });
+            if (result) {
+                await loadAdminUsers();
+            }
+        }
+
+        // 删除用户
+        async function deleteUser(userId, email) {
+            console.log('[DeleteUser] 被调用:', userId, email);
+            showConfirm(`确定要删除用户 ${email} 吗？此操作将永久删除该用户的账户和所有数据，不可恢复！`, async () => {
+                showToast('正在删除...', 'info');
+                const result = await callManageUsers('delete_user', { user_id: userId });
+                if (result) {
+                    // 如果正在查看该用户，切换回自己
+                    if (adminViewUserId === userId) {
+                        adminViewUserId = null;
+                        updateViewingBadge();
+                    }
+                    await loadAdminUsers();
+                    showToast('用户已删除', 'success');
+                } else {
+                    showToast('删除失败，请确认已登录并拥有管理员权限', 'error');
+                }
+            });
+        }
+
+        // 添加白名单用户（用户名+密码，邮箱可选后续绑定）
+        async function addWhitelistUser() {
+            const username = document.getElementById('whitelistUsername').value.trim();
+            const password = document.getElementById('whitelistPassword').value;
+            const displayName = document.getElementById('whitelistDisplayName').value.trim();
+            const errorEl = document.getElementById('whitelistError');
+
+            if (!username || !password) { errorEl.textContent = '请填写用户名和密码'; return; }
+            if (password.length < 6) { errorEl.textContent = '密码至少需要6位'; return; }
+
+            errorEl.textContent = '';
+
+            // 收集管理员当前的 API Keys
+            const apiKeys = collectCurrentApiKeys();
+
+            // 使用用户名作为临时邮箱（格式：username@whitelist.local）
+            const tempEmail = username + '@whitelist.local';
+
+            const result = await callManageUsers('create_whitelist_user', {
+                email: tempEmail,
+                password,
+                display_name: displayName || username,
+                api_keys: apiKeys,
+            });
+
+            if (result) {
+                // 清空表单
+                document.getElementById('whitelistUsername').value = '';
+                document.getElementById('whitelistPassword').value = '';
+                document.getElementById('whitelistDisplayName').value = '';
+                showToast(result.message || '白名单用户已添加', 'success');
+                await loadWhitelistList();
+                await loadAdminUsers();
+            } else {
+                errorEl.textContent = '操作失败，请检查网络或 Edge Function 是否已部署';
+            }
+        }
+
+        // 移除白名单用户
+        async function removeWhitelistUser(userId) {
+            const result = await callManageUsers('remove_whitelist', { user_id: userId });
+            if (result) {
+                showToast('已移出白名单', 'success');
+                await loadWhitelistList();
+                await loadAdminUsers();
+            }
+        }
+
+        // 将现有用户提升为白名单（不传密码，保留原密码，同步管理员API Keys）
+        async function promoteToWhitelist(userId, email) {
+            const displayName = _adminUsersCache.find(u => u.user_id === userId)?.display_name;
+            const apiKeys = collectCurrentApiKeys();
+            const result = await callManageUsers('create_whitelist_user', {
+                email,
+                display_name: displayName,
+                api_keys: apiKeys,
+            });
+            if (result) {
+                showToast(result.message || '已添加为白名单用户', 'success');
+                await loadAdminUsers();
+                await loadWhitelistList();
+            }
+        }
+
+        // 加载白名单列表
+        async function loadWhitelistList() {
+            const listEl = document.getElementById('whitelistUserList');
+            if (!listEl) return;
+
+            if (!_adminUsersCache) {
+                const { data } = await supabaseClient.from('user_profiles').select('*').order('created_at', { ascending: false });
+                _adminUsersCache = data || [];
+            }
+
+            const whitelistUsers = _adminUsersCache.filter(u => u.status === 'whitelist');
+
+            if (whitelistUsers.length === 0) {
+                listEl.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 1rem;font-size:0.8rem;">暂无白名单用户</p>';
+                return;
+            }
+
+            listEl.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:0.35rem;">
+                    ${whitelistUsers.map(u => `
+                        <div class="admin-user-item" style="cursor:default;">
+                            <div class="admin-user-left">
+                                <div class="user-avatar" style="width:28px;height:28px;font-size:0.7rem;">${(u.email || 'U')[0].toUpperCase()}</div>
+                                <div class="admin-user-info">
+                                    <div class="admin-user-name" style="font-size:0.8rem;">
+                                        ${escapeHtml(u.display_name || u.email || '未知')}
+                                        <span class="admin-user-status status-whitelist">白名单</span>
+                                        ${u.api_keys ? '<span style="font-size:0.65rem;color:#60a5fa;">🔑 有Key</span>' : '<span style="font-size:0.65rem;color:#fbbf24;">⚠ 无Key</span>'}
+                                    </div>
+                                    <div class="admin-user-email" style="font-size:0.7rem;">${escapeHtml(u.email || '')}</div>
+                                </div>
+                            </div>
+                            <button class="admin-btn-action danger" onclick="removeWhitelistUser('${u.user_id}')">移出</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // 收集当前管理员浏览器中的 API Keys
+        function collectCurrentApiKeys() {
+            const keys = {};
+            ['zhipu', 'gemini', 'kimi', 'qwen', 'groq'].forEach(p => {
+                const key = localStorage.getItem(p + '_api_key');
+                if (key) keys[p] = key;
+            });
+            return Object.keys(keys).length > 0 ? keys : null;
+        }
+
+        // 将管理员 API Keys 加载到表单
+        async function loadAdminApiKeysIntoForm() {
+            // 先从 localStorage 加载（最新数据）
+            const localKeys = {};
+            ['zhipu', 'gemini', 'kimi', 'qwen', 'groq'].forEach(p => {
+                const key = localStorage.getItem(p + '_api_key');
+                if (key) localKeys[p] = key;
+            });
+
+            // 如果有本地 keys，优先用本地
+            if (Object.keys(localKeys).length > 0) {
+                Object.entries(localKeys).forEach(([p, key]) => {
+                    const el = document.getElementById('admin' + p.charAt(0).toUpperCase() + p.slice(1) + 'Key');
+                    if (el && !el.value) el.value = key;
+                });
+            }
+
+            // 也从云端加载（以防本地没有）
+            try {
+                const { data } = await supabaseClient.from('user_profiles')
+                    .select('api_keys')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+                if (data?.api_keys) {
+                    Object.entries(data.api_keys).forEach(([p, key]) => {
+                        const el = document.getElementById('admin' + p.charAt(0).toUpperCase() + p.slice(1) + 'Key');
+                        if (el && !el.value) el.value = key;
+                    });
+                }
+            } catch (e) { /* 忽略 */ }
+        }
+
+        // 保存并同步 API Keys
+        async function saveAndSyncApiKeys() {
+            const apiKeys = {};
+            ['zhipu', 'gemini', 'kimi', 'qwen', 'groq'].forEach(p => {
+                const el = document.getElementById('admin' + p.charAt(0).toUpperCase() + p.slice(1) + 'Key');
+                if (el && el.value.trim()) apiKeys[p] = el.value.trim();
+            });
+
+            if (Object.keys(apiKeys).length === 0) {
+                showToast('请至少填写一个 API Key', 'warning');
+                return;
+            }
+
+            // 先保存到本地
+            Object.entries(apiKeys).forEach(([p, key]) => {
+                localStorage.setItem(p + '_api_key', key);
+            });
+
+            // 同步到云端 Edge Function
+            const result = await callManageUsers('sync_api_keys', { api_keys: apiKeys });
+            if (result) {
+                document.getElementById('apiKeysSyncStatus').innerHTML =
+                    '<span style="color:#34d399;">✅ ' + result.message + '</span>';
+                showToast(result.message, 'success');
+            } else {
+                document.getElementById('apiKeysSyncStatus').innerHTML =
+                    '<span style="color:#fbbf24;">⚠ API Keys 已保存到本地，但云端同步失败（Edge Function 可能未部署）</span>';
+            }
+        }
+
+        // 白名单用户登录后自动加载管理员 API Keys
+        async function loadWhitelistApiKeys() {
+            if (!currentUser) return;
+            try {
+                const { data } = await supabaseClient.from('user_profiles')
+                    .select('status, api_keys')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+
+                if (!data || !data.api_keys) return;
+
+                // 白名单用户标记
+                if (data.status === 'whitelist') {
+                    _userWhitelist = true;
+                }
+
+                // 管理员和白名单用户都自动加载 API Keys
+                if (isAdmin || data.status === 'whitelist') {
+                    const who = isAdmin ? '管理员' : '白名单用户';
+                    console.log(`[APIKeys] 自动加载 ${who} API Keys`);
+                    Object.entries(data.api_keys).forEach(([p, key]) => {
+                        localStorage.setItem(p + '_api_key', key);
+                    });
+                    // 同步 Groq key 到智能推荐配置
+                    if (data.api_keys.groq) {
+                        const aiConfig = getAIConfig();
+                        aiConfig.apiKey = data.api_keys.groq;
+                        aiConfig.enabled = true;
+                        saveAIConfig(aiConfig);
+                    }
+                    // 如果图片反推页面已渲染，刷新 API Key 输入框
+                    refreshApiKeyInputs();
+                    showToast(`已自动加载 API Keys ✓`, 'success');
+                }
+            } catch (e) {
+                console.warn('[APIKeys] 加载失败:', e.message);
+            }
+        }
+
+        // 刷新 API Key 输入框（如果在图片反推页面）
+        function refreshApiKeyInputs() {
+            ['zhipu', 'gemini', 'kimi', 'qwen', 'groq'].forEach(p => {
+                const el = document.getElementById(p + 'ApiKey');
+                if (el) {
+                    const savedKey = localStorage.getItem(p + '_api_key');
+                    if (savedKey && !el.value) el.value = savedKey;
+                }
+            });
+            if (typeof updateApiKeyStatus === 'function') updateApiKeyStatus();
         }
 
         function updateViewingBadge() {
@@ -488,6 +1079,7 @@
         document.addEventListener('click', (e) => {
             if (e.target === document.getElementById('authOverlay')) closeAuthModal();
             if (e.target === document.getElementById('adminPanelOverlay')) closeAdminPanel();
+            if (e.target === document.getElementById('confirmOverlay')) closeConfirm();
             const badge = document.getElementById('userBadge');
             const menu = document.getElementById('userMenu');
             if (badge && menu && !badge.contains(e.target)) menu.classList.remove('active');
@@ -1972,6 +2564,12 @@
         const SMART_BATCH_SIZE = 20;        // 每批展示数量
 
         function openSmartSearch(categoryId) {
+            // 白名单校验：仅白名单用户和管理员可使用智能推荐
+            if (!isAdmin && !_userWhitelist) {
+                showToast('智能推荐仅限白名单用户使用，请联系管理员', 'warning');
+                return;
+            }
+
             smartSearchTargetCategoryId = categoryId;
             smartSearchSelectedWords = new Set();
             _smartSearchDisplayPool = [];
@@ -2038,6 +2636,10 @@
         }
 
         async function doSmartSearch() {
+            if (!isAdmin && !_userWhitelist) {
+                showToast('智能推荐仅限白名单用户使用', 'warning');
+                return;
+            }
             const keyword = document.getElementById('smartSearchKeyword').value.trim();
             if (!keyword) {
                 showToast('请输入搜索关键词', 'warning');
@@ -2516,6 +3118,26 @@ ${sampleStr}
             const apiKeyInput = document.getElementById('aiApiKey');
             const groqConfig = document.getElementById('aiGroqConfig');
             const statusHint = document.getElementById('aiStatusHint');
+            const configPanel = document.getElementById('smartSearchAIConfig');
+            const saveBtn = apiKeyInput?.nextElementSibling;
+
+            // 非白名单用户：隐藏自填配置，显示权限提示
+            if (!isAdmin && !_userWhitelist) {
+                if (providerSelect) providerSelect.style.display = 'none';
+                if (groqConfig) groqConfig.style.display = 'none';
+                if (apiKeyInput) apiKeyInput.style.display = 'none';
+                if (saveBtn) saveBtn.style.display = 'none';
+                if (statusHint) statusHint.innerHTML = '<span style="color:#fbbf24;">🔒 智能推荐仅限白名单用户使用，请联系管理员开通</span>';
+                if (configPanel) configPanel.style.display = 'none';
+                return;
+            }
+
+            // 白名单/管理员：正常显示配置
+            if (providerSelect) providerSelect.style.display = '';
+            if (groqConfig) groqConfig.style.display = 'flex';
+            if (apiKeyInput) apiKeyInput.style.display = '';
+            if (saveBtn) saveBtn.style.display = '';
+            if (configPanel) configPanel.style.display = '';
 
             if (providerSelect) providerSelect.value = config.provider || 'groq';
             if (apiKeyInput) apiKeyInput.value = config.apiKey || '';
@@ -2538,6 +3160,7 @@ ${sampleStr}
         }
 
         function toggleAIConfig() {
+            if (!isAdmin && !_userWhitelist) return;
             const panel = document.getElementById('smartSearchAIConfig');
             if (panel) {
                 const isVisible = panel.style.display !== 'none';
@@ -2557,6 +3180,10 @@ ${sampleStr}
         }
 
         function saveAIKey() {
+            if (!isAdmin && !_userWhitelist) {
+                showToast('API Key 配置仅限白名单用户使用', 'warning');
+                return;
+            }
             const apiKey = document.getElementById('aiApiKey').value.trim();
             const config = getAIConfig();
             config.apiKey = apiKey;

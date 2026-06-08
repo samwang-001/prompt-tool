@@ -1,0 +1,97 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - heading "绘画提示词组合工具" [level=1] [ref=e5]
+        - generic "云端未连接，点击重试链接云端" [ref=e6] [cursor=pointer]: 📡 本地模式
+      - generic [ref=e7]:
+        - button "📝 词汇组合" [ref=e8] [cursor=pointer]:
+          - generic [ref=e9]: 📝
+          - text: 词汇组合
+        - button "🖼️ 图片反推" [ref=e10] [cursor=pointer]:
+          - generic [ref=e11]: 🖼️
+          - text: 图片反推
+      - generic [ref=e12]:
+        - button "登录 / 注册" [ref=e13] [cursor=pointer]
+        - button "导出数据" [ref=e14] [cursor=pointer]
+        - button "导入数据" [ref=e15] [cursor=pointer]
+  - generic:
+    - generic:
+      - heading "登录" [level=2]
+      - paragraph: 登录后你的公式和词库将云端同步
+      - generic:
+        - button "登录"
+        - button "注册"
+      - generic:
+        - generic: 邮箱
+        - textbox "your@email.com"
+      - generic:
+        - generic: 密码
+        - textbox "至少6位"
+      - button "登录"
+      - button "×"
+  - generic:
+    - generic:
+      - heading "👥 管理所有用户" [level=3]
+      - paragraph: 作为管理员，你可以查看和编辑任何用户的数据。选择用户后，下方显示该用户的公式和词库。
+      - generic:
+        - paragraph: 加载中...
+      - button "×"
+  - main [ref=e16]:
+    - text: 提示词预览
+    - generic [ref=e1064]:
+      - generic [ref=e1065]:
+        - generic [ref=e1066]:
+          - generic [ref=e1067]:
+            - generic [ref=e1068]: 上传图片
+            - button "清空" [ref=e1069] [cursor=pointer]
+          - generic [ref=e1071] [cursor=pointer]:
+            - generic [ref=e1072]: 拖拽图片到这里或点击上传
+            - generic [ref=e1073]: 支持 JPG / PNG / WebP，最大 10MB
+        - generic [ref=e1074]:
+          - generic [ref=e1075]:
+            - generic [ref=e1076]: API Key
+            - generic [ref=e1077]: 未配置
+          - generic [ref=e1078]:
+            - generic [ref=e1079]:
+              - button "智谱(免费)" [ref=e1080] [cursor=pointer]
+              - button "Gemini(备选)" [ref=e1081] [cursor=pointer]
+            - generic [ref=e1082]:
+              - button "GLM-4V-Flash(免费)" [ref=e1083]
+              - button "GLM-4V-Plus" [active] [ref=e1084]
+              - button "GLM-4V" [ref=e1085]
+            - generic [ref=e1086]:
+              - generic [ref=e1087]:
+                - textbox "粘贴智谱 GLM-4V API Key" [ref=e1088]
+                - button "👁" [ref=e1089] [cursor=pointer]
+              - button "验证并保存" [ref=e1090] [cursor=pointer]
+            - generic [ref=e1091]:
+              - link "获取免费 API Key" [ref=e1092] [cursor=pointer]:
+                - /url: https://bigmodel.cn/usercenter/apikeys
+              - generic [ref=e1093]: 仅保存在本地浏览器
+        - generic [ref=e1094]:
+          - generic [ref=e1095]:
+            - generic [ref=e1096]: 反推结果
+            - generic [ref=e1097]:
+              - button "中" [ref=e1098] [cursor=pointer]
+              - button "EN" [ref=e1099] [cursor=pointer]
+              - button "复制" [ref=e1100] [cursor=pointer]
+              - button "填入组合" [ref=e1101] [cursor=pointer]
+          - generic [ref=e1102]:
+            - generic [ref=e1103]:
+              - button "提示词直出" [ref=e1104] [cursor=pointer]
+              - button "关键词标签" [ref=e1105] [cursor=pointer]
+            - textbox "上传图片并点击「开始反推」，AI 将自动分析图片内容并生成提示词..." [ref=e1106]
+            - generic [ref=e1108]: 0 / 2000
+            - button "开始反推" [disabled] [ref=e1109]:
+              - generic [ref=e1110]: 开始反推
+      - generic [ref=e1111]:
+        - generic [ref=e1112]:
+          - generic [ref=e1113]: 历史记录
+          - button "清空" [ref=e1114] [cursor=pointer]
+        - generic [ref=e1116]:
+          - paragraph [ref=e1117]: 暂无历史记录
+          - paragraph [ref=e1118]: 反推结果将自动保存到这里
+  - generic [ref=e1120]:
+    - generic [ref=e1121]: undefined
+    - generic [ref=e1122]: 智谱模型已切换为 GLM-4V-Plus
