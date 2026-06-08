@@ -6630,8 +6630,9 @@ ${sampleStr}
                             <div id="zhipuModelSelector" style="margin-bottom:0.75rem;">
                                 <select id="zhipuModelSelect" onchange="switchZhipuModel(this.value)" style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;background:rgba(15,23,42,0.5);color:var(--text-primary);cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%2394a3b8%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 0.75rem center;padding-right:2rem;">
                                     <option value="glm-4v-flash">GLM-4V-Flash（免费·不限量·速度快）</option>
-                                    <option value="glm-4.1v-thinking-flash">GLM-4.1V-Thinking（免费·内置思维链推理）</option>
+                                    <option value="glm-4.1v-thinking-flash">GLM-4.1V-Thinking-Flash（免费·思维链推理）</option>
                                     <option value="glm-4.6v-flash">GLM-4.6V-Flash（免费·128K上下文·最新免费）</option>
+                                    <option value="glm-4.7v-flash">GLM-4.7V-Flash（免费·最新架构·128K上下文）</option>
                                     <option value="glm-4v-plus-0111">GLM-4V-Plus（付费·高级视觉·16K上下文）</option>
                                     <option value="glm-4.5v">GLM-4.5V（付费·MOE架构·64K上下文）</option>
                                     <option value="glm-4.6v">GLM-4.6V（付费·全能旗舰·128K上下文）</option>
@@ -6641,30 +6642,35 @@ ${sampleStr}
                             <!-- Gemini 模型选择 -->
                             <div id="geminiModelSelector" style="display:none;margin-bottom:0.75rem;">
                                 <select id="geminiModelSelect" onchange="switchGeminiModel(this.value)" style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;background:rgba(15,23,42,0.5);color:var(--text-primary);cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%2394a3b8%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 0.75rem center;padding-right:2rem;">
-                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash（免费·每日1500次·最新）</option>
+                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash（免费·每日1500次·速度快）</option>
                                     <option value="gemini-2.0-flash">Gemini 2.0 Flash（免费·每日1500次）</option>
+                                    <option value="gemini-3-flash">Gemini 3 Flash（免费·最新·多模态·推理强）</option>
+                                    <option value="gemini-3.5-flash">Gemini 3.5 Flash（免费·最新·极速多模态）</option>
                                     <option value="gemini-2.5-pro">Gemini 2.5 Pro（付费·最强推理·每日50次免费）</option>
+                                    <option value="gemini-3.1-pro">Gemini 3.1 Pro（付费·最强旗舰·原生多模态）</option>
                                 </select>
                             </div>
                             <!-- Kimi 模型选择 -->
                             <div id="kimiModelSelector" style="display:none;margin-bottom:0.75rem;">
                                 <select id="kimiModelSelect" onchange="switchKimiModel(this.value)" style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;background:rgba(15,23,42,0.5);color:var(--text-primary);cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%2394a3b8%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 0.75rem center;padding-right:2rem;">
-                                    <option value="kimi-k2.5">Kimi K2.5（多模态·256K上下文）</option>
+                                    <option value="kimi-k2.5">Kimi K2.5（多模态·原生视觉·256K上下文）</option>
+                                    <option value="kimi-k2.6">Kimi K2.6（最新旗舰·多模态·256K上下文）</option>
                                 </select>
                             </div>
                             <!-- 千问模型选择 -->
                             <div id="qwenModelSelector" style="display:none;margin-bottom:0.75rem;">
                                 <select id="qwenModelSelect" onchange="switchQwenModel(this.value)" style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;background:rgba(15,23,42,0.5);color:var(--text-primary);cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%2394a3b8%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 0.75rem center;padding-right:2rem;">
-                                    <option value="qwen3-vl-235b-a22b-thinking">Qwen3-VL-235B（最强视觉·思维链）</option>
-                                    <option value="qwen3-vl-32b-thinking">Qwen3-VL-32B（高效视觉·思维链）</option>
-                                    <option value="qwen3-vl-30b-a3b-thinking">Qwen3-VL-30B-A3B（轻量视觉·思维链）</option>
+                                    <option value="qwen3-vl-235b-a22b-thinking">Qwen3-VL-235B（最强视觉·思维链·新用户7000万Token）</option>
+                                    <option value="qwen3-vl-32b-thinking">Qwen3-VL-32B（高效视觉·思维链·新用户7000万Token）</option>
+                                    <option value="qwen3-vl-30b-a3b-thinking">Qwen3-VL-30B-A3B（轻量视觉·思维链·新用户7000万Token）</option>
+                                    <option value="qwen-vl-plus">Qwen-VL-Plus（商业版·高性价比·稳定）</option>
+                                    <option value="qwen-vl-max">Qwen-VL-Max（商业版·最强·精度最高）</option>
                                 </select>
                             </div>
                             <!-- Groq 模型选择 -->
                             <div id="groqModelSelector" style="display:none;margin-bottom:0.75rem;">
                                 <select id="groqModelSelect" onchange="switchGroqModel(this.value)" style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;background:rgba(15,23,42,0.5);color:var(--text-primary);cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%2394a3b8%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 0.75rem center;padding-right:2rem;">
-                                    <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B（免费·通用视觉·128K）</option>
-                                    <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 17B（免费·复杂视觉推理·128K）</option>
+                                    <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B（免费·多模态视觉·128K）</option>
                                 </select>
                             </div>
                             <!-- 模型提示 -->
@@ -8082,27 +8088,33 @@ ${keywordsList}
                     'glm-4v-flash': '免费·不限量·速度快，⚠️ 不支持本地上传，仅支持在线图片URL',
                     'glm-4.1v-thinking-flash': '免费·思维链推理，⚠️ 不支持本地上传，仅支持在线图片URL',
                     'glm-4.6v-flash': '免费·128K上下文·最新，⚠️ 不支持本地上传，仅支持在线图片URL',
+                    'glm-4.7v-flash': '免费·最新架构·128K上下文，⚠️ 不支持本地上传，仅支持在线图片URL',
                     'glm-4v-plus-0111': '付费·高级视觉·16K上下文，✅ 支持本地上传',
                     'glm-4.5v': '付费·MOE架构·64K上下文，✅ 支持本地上传',
                     'glm-4.6v': '付费·全能旗舰·128K上下文，✅ 支持本地上传',
                     'glm-5v-turbo': '付费·5代·200K上下文·视觉编程，✅ 支持本地上传'
                 },
                 'gemini': {
-                    'gemini-2.5-flash': '免费·每日1500次·最新·速度快，✅ 支持本地上传base64',
+                    'gemini-2.5-flash': '免费·每日1500次·速度快，✅ 支持本地上传base64',
                     'gemini-2.0-flash': '免费·每日1500次，✅ 支持本地上传base64',
-                    'gemini-2.5-pro': '付费·最强推理·每日50次免费，✅ 支持本地上传base64'
+                    'gemini-3-flash': '免费·最新·多模态·推理强，✅ 支持本地上传base64',
+                    'gemini-3.5-flash': '免费·最新·极速多模态，✅ 支持本地上传base64',
+                    'gemini-2.5-pro': '付费·最强推理·每日50次免费，✅ 支持本地上传base64',
+                    'gemini-3.1-pro': '付费·最强旗舰·原生多模态，✅ 支持本地上传base64'
                 },
                 'kimi': {
-                    'kimi-k2.5': '新用户赠送额度·多模态·256K上下文，✅ 支持本地上传base64'
+                    'kimi-k2.5': '新用户赠送额度·多模态·原生视觉·256K上下文，✅ 支持本地上传base64',
+                    'kimi-k2.6': '最新旗舰·多模态·256K上下文·Agent能力，✅ 支持本地上传base64'
                 },
                 'qwen': {
                     'qwen3-vl-235b-a22b-thinking': '最强视觉·思维链，✅ 支持本地上传base64（新用户7000万Token免费）',
                     'qwen3-vl-32b-thinking': '高效视觉·思维链，✅ 支持本地上传base64（新用户7000万Token免费）',
-                    'qwen3-vl-30b-a3b-thinking': '轻量视觉·思维链，✅ 支持本地上传base64（新用户7000万Token免费）'
+                    'qwen3-vl-30b-a3b-thinking': '轻量视觉·思维链，✅ 支持本地上传base64（新用户7000万Token免费）',
+                    'qwen-vl-plus': '商业版·高性价比·稳定，✅ 支持本地上传base64',
+                    'qwen-vl-max': '商业版·最强视觉·精度最高，✅ 支持本地上传base64'
                 },
                 'groq': {
-                    'meta-llama/llama-4-scout-17b-16e-instruct': '完全免费·通用视觉·OCR·128K上下文，✅ 支持本地上传base64',
-                    'meta-llama/llama-4-maverick-17b-128e-instruct': '完全免费·复杂视觉推理·128K上下文，✅ 支持本地上传base64'
+                    'meta-llama/llama-4-scout-17b-16e-instruct': '完全免费·多模态视觉·OCR·128K上下文，✅ 支持本地上传base64（⚠️ Maverick不支持视觉，只有Scout可反推图片）'
                 }
             };
             
