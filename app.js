@@ -939,9 +939,17 @@
                     .eq('user_id', currentUser.id)
                     .maybeSingle();
 
-                if (data && data.status === 'whitelist' && data.api_keys) {
-                    console.log('[Whitelist] 自动加载管理员 API Keys');
+                if (!data || !data.api_keys) return;
+
+                // 白名单用户标记
+                if (data.status === 'whitelist') {
                     _userWhitelist = true;
+                }
+
+                // 管理员和白名单用户都自动加载 API Keys
+                if (isAdmin || data.status === 'whitelist') {
+                    const who = isAdmin ? '管理员' : '白名单用户';
+                    console.log(`[APIKeys] 自动加载 ${who} API Keys`);
                     Object.entries(data.api_keys).forEach(([p, key]) => {
                         localStorage.setItem(p + '_api_key', key);
                     });
@@ -954,10 +962,10 @@
                     }
                     // 如果图片反推页面已渲染，刷新 API Key 输入框
                     refreshApiKeyInputs();
-                    showToast('已自动加载管理员提供的 API Keys ✓', 'success');
+                    showToast(`已自动加载 API Keys ✓`, 'success');
                 }
             } catch (e) {
-                console.warn('[Whitelist] 加载 API Keys 失败:', e.message);
+                console.warn('[APIKeys] 加载失败:', e.message);
             }
         }
 
