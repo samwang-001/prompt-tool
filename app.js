@@ -586,6 +586,7 @@
 
             try {
                 const { data, error } = await supabaseClient.from('user_profiles').select('*').order('created_at', { ascending: false });
+                console.log('[loadAdminUsers] 查询结果:', { count: data?.length, error: error?.message, currentUser: currentUser?.email, isAdmin });
                 if (error) { listEl.innerHTML = '<p style="color: var(--error); text-align: center;">加载失败: ' + error.message + '</p>'; return; }
 
                 if (!data || data.length === 0) {
@@ -595,8 +596,10 @@
                 }
 
                 _adminUsersCache = data;
+                console.log('[loadAdminUsers] 缓存用户列表:', _adminUsersCache.map(u => ({ email: u.email, role: u.role, status: u.status })));
                 renderAdminUserList();
             } catch (e) {
+                console.error('[loadAdminUsers] 异常:', e);
                 listEl.innerHTML = '<p style="color: var(--error); text-align: center;">出错: ' + e.message + '</p>';
             }
         }
