@@ -276,6 +276,32 @@
             document.getElementById('authError').textContent = '';
         }
 
+        // 根据邮箱域名生成邮箱快捷跳转链接 HTML
+        function buildEmailVerifyHint(email) {
+            const emailDomain = (email || '').split('@')[1]?.toLowerCase() || '';
+            const mailUrls = {
+                'qq.com': 'https://mail.qq.com',
+                '163.com': 'https://mail.163.com',
+                '126.com': 'https://mail.126.com',
+                'gmail.com': 'https://mail.google.com',
+                'outlook.com': 'https://outlook.live.com',
+                'hotmail.com': 'https://outlook.live.com',
+                'live.com': 'https://outlook.live.com',
+                'sina.com': 'https://mail.sina.com.cn',
+                'sohu.com': 'https://mail.sohu.com',
+                'aliyun.com': 'https://mail.aliyun.com',
+                'foxmail.com': 'https://mail.qq.com',
+                'yeah.net': 'https://mail.163.com',
+                'icloud.com': 'https://www.icloud.com/mail',
+                'proton.me': 'https://mail.proton.me',
+                'protonmail.com': 'https://mail.proton.me',
+            };
+            const mailUrl = mailUrls[emailDomain] || '';
+            return mailUrl
+                ? `<a href="${mailUrl}" target="_blank" style="display:inline-block;padding:0.35rem 0.7rem;background:rgba(96,165,250,0.15);color:#60a5fa;border-radius:6px;text-decoration:none;font-size:0.78rem;margin-top:0.3rem;">📬 打开 ${emailDomain} 邮箱 →</a>`
+                : '<span style="font-size:0.72rem;color:var(--text-secondary);">请打开你的邮箱查收验证邮件</span>';
+        }
+
         async function doAuth() {
             const email = document.getElementById('authEmail').value.trim();
             const password = document.getElementById('authPassword').value;
@@ -304,7 +330,9 @@
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) {
                         if (error.message.includes('Invalid login')) errorEl.textContent = '邮箱或密码错误';
-                        else if (error.message.includes('Email not confirmed')) errorEl.textContent = '邮箱尚未验证，请查收验证邮件（含垃圾邮件箱）并点击链接。如未收到，请重新注册';
+                        else if (error.message.includes('Email not confirmed')) {
+                            const msgHtml = buildEmailVerifyHint(email);
+                            errorEl.innerHTML = `<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:0.75rem;text-align:left;"><p style="color:#fbbf24;margin:0 0 0.5rem;font-weight:700;">⚠️ 邮箱尚未验证</p><p style="color:var(--text-secondary);font-size:0.78rem;margin:0 0 0.5rem;">请查收发送至 <strong style="color:var(--text-primary);">${escapeHtml(email)}</strong> 的验证邮件（含垃圾邮件箱）并点击验证链接。</p>${msgHtml}</div>`;
                         else errorEl.textContent = error.message;
                     } else {
                         // 检查用户是否被拉黑
@@ -354,7 +382,14 @@
                             const needConfirm = data.user?.email_confirmed_at === null && data.session === null;
                             errorEl.textContent = '';
                             if (needConfirm) {
-                                showToast('注册成功！验证邮件已发送，请检查邮箱（含垃圾邮件箱）并点击验证链接', 'success');
+                                const msgHtml = buildEmailVerifyHint(email);
+                                errorEl.innerHTML = `
+                                    <div style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.35);border-radius:8px;padding:0.75rem;text-align:left;">
+                                        <p style="color:#34d399;margin:0 0 0.5rem;font-weight:700;">✅ 注册成功！需要验证邮箱</p>
+                                        <p style="color:var(--text-secondary);font-size:0.78rem;margin:0 0 0.5rem;">验证邮件已发送至 <strong style="color:var(--text-primary);">${escapeHtml(email)}</strong>，请查收（含垃圾邮件箱）并点击验证链接。</p>
+                                        ${msgHtml}
+                                    </div>
+                                `;
                             } else {
                                 showToast('注册成功！已自动登录', 'success');
                             }
