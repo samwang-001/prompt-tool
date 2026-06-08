@@ -5,8 +5,10 @@
         const ADMIN_EMAIL = 'hvho1982@163.com';
         // 应用地址（邮箱验证回调用）
         const APP_URL = 'https://www.prompt-tool.dedyn.io';
-        // Supabase Edge Function 地址（用户管理）
-        const MANAGE_USERS_URL = 'https://aishmynicfrueempsbun.supabase.co/functions/v1/manage-users';
+        // Supabase Edge Function 地址（本地开发走代理避免 CORS）
+        const MANAGE_USERS_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? '/api/manage-users'
+            : 'https://aishmynicfrueempsbun.supabase.co/functions/v1/manage-users';
 
         let supabaseClient = null;
         let cloudReady = false;
@@ -15,6 +17,7 @@
         // 认证状态
         let currentUser = null;       // { id, email, user_metadata }
         let isAdmin = false;          // 是否为管理员
+        let _userWhitelist = false;   // 当前用户是否是白名单用户
         let adminViewUserId = null;   // 管理员正在查看的用户ID（null=看自己的数据）
         let _adminUsersCache = null;  // 管理员面板用户列表缓存
         let _dataGen = 0;             // 数据代数计数器，切换用户时递增，防止异步保存覆盖
@@ -28,10 +31,10 @@
             if (cloudInitPromise) return cloudInitPromise;
             cloudInitPromise = (async () => {
                 try {
-                    // 等待 SDK 加载（最多等 3 秒）
+                    // 等待 SDK 加载（最多等 10 秒）
                     if (!window.supabase) {
                         let waited = 0;
-                        while (!window.supabase && waited < 30) {
+                        while (!window.supabase && waited < 100) {
                             await new Promise(r => setTimeout(r, 100));
                             waited++;
                         }
@@ -48,11 +51,17 @@
                         global: { headers: { 'x-client-info': 'prompt-tool/2.0' } }
                     });
 
-                    // 监听认证状态变化
+                    // 监听认证状态变化（回调中的异步操作各自处理超时，不影响初始化流程）
                     supabaseClient.auth.onAuthStateChange(async (event, session) => {
                         if (event === 'SIGNED_IN' && session) {
-                            // 检查是否被拉黑
-                            const blocked = await checkUserBlocked(session.user.id);
+                            let blocked = false;
+                            try {
+                                const blockResult = await Promise.race([
+                                    checkUserBlocked(session.user.id),
+                                    new Promise(r => setTimeout(() => r(false), 3000))
+                                ]);
+                                blocked = blockResult;
+                            } catch { blocked = false; }
                             if (blocked) {
                                 await supabaseClient.auth.signOut();
                                 updateAuthUI(null);
@@ -61,10 +70,8 @@
                             }
                             const wasLoggedOut = !currentUser;
                             updateAuthUI(session.user);
-                            // 新登录（包括邮箱验证后首次登录）自动同步数据
                             if (cloudReady && wasLoggedOut) {
                                 reloadCloudData();
-                                // 白名单用户加载 API Keys
                                 loadWhitelistApiKeys();
                             }
                         } else if (event === 'SIGNED_OUT') {
@@ -73,8 +80,18 @@
                     });
 
                     // 检查已有会话（尝试恢复登录状态）
-                    let { data: { session } } = await supabaseClient.auth.getSession();
-                    
+                    let session = null;
+                    try {
+                        const sessionResult = await Promise.race([
+                            supabaseClient.auth.getSession(),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), 5000))
+                        ]);
+                        session = sessionResult?.data?.session || null;
+                    } catch (timeoutErr) {
+                        console.warn('[Supabase] getSession 超时，跳过会话恢复:', timeoutErr.message);
+                        session = null;
+                    }
+
                     // 如果 getSession 返回空，尝试从 localStorage 恢复并刷新
                     if (!session) {
                         try {
@@ -83,13 +100,15 @@
                                 const parsed = JSON.parse(stored);
                                 if (parsed && parsed.refresh_token) {
                                     console.log('[Supabase] 发现本地存储的会话，尝试刷新...');
-                                    const { data: refreshData, error: refreshErr } = await supabaseClient.auth.refreshSession({ refresh_token: parsed.refresh_token });
-                                    if (!refreshErr && refreshData.session) {
-                                        session = refreshData.session;
+                                    const refreshResult = await Promise.race([
+                                        supabaseClient.auth.refreshSession({ refresh_token: parsed.refresh_token }),
+                                        new Promise((_, reject) => setTimeout(() => reject(new Error('refreshSession timeout')), 5000))
+                                    ]);
+                                    if (!refreshResult.error && refreshResult.data && refreshResult.data.session) {
+                                        session = refreshResult.data.session;
                                         console.log('[Supabase] ✅ 会话已恢复');
                                     } else {
-                                        console.warn('[Supabase] 会话刷新失败，需要重新登录:', refreshErr?.message);
-                                        // 清除过期的本地存储
+                                        console.warn('[Supabase] 会话刷新失败，需要重新登录:', refreshResult.error?.message);
                                         localStorage.removeItem('prompt-tool-auth');
                                     }
                                 }
@@ -98,46 +117,56 @@
                             console.warn('[Supabase] 会话恢复异常:', e.message);
                         }
                     }
-                    
+
                     if (session && session.user) {
-                        // 检查是否被拉黑
-                        const blocked = await checkUserBlocked(session.user.id);
+                        let blocked = false;
+                        try {
+                            const blockResult = await Promise.race([
+                                checkUserBlocked(session.user.id),
+                                new Promise(r => setTimeout(() => r(false), 3000))
+                            ]);
+                            blocked = blockResult;
+                        } catch { blocked = false; }
                         if (blocked) {
                             await supabaseClient.auth.signOut();
                             updateAuthUI(null);
-                            session = null; // 防止后续验证回调误用
+                            session = null;
                             showToast('账户已被限制访问', 'error');
                         } else {
                             updateAuthUI(session.user);
                         }
                     } else {
-                        // 确保清除旧的登录状态
                         updateAuthUI(null);
                     }
+
                     // 处理邮箱验证回调（从验证链接跳回）
                     try {
                         const urlParams = new URLSearchParams(window.location.search);
                         const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
                         const isVerified = urlParams.get('verified') === '1';
                         const hasEmailToken = hashParams.get('type') === 'signup' || hashParams.get('type') === 'email_change';
-                        
+
                         if (isVerified || hasEmailToken) {
                             if (session && session.user) {
                                 console.log('[Auth] ✅ 邮箱验证成功，已自动登录');
                                 showToast('邮箱验证成功！已自动登录，数据同步中...', 'success');
                                 await reloadCloudData();
                             } else if (hasEmailToken) {
-                                // Supabase 可能刚验证完但 session 还没就绪，稍等再尝试
                                 setTimeout(async () => {
-                                    const { data: { session: s2 } } = await supabaseClient.auth.getSession();
-                                    if (s2 && s2.user) {
-                                        updateAuthUI(s2.user);
-                                        showToast('邮箱验证成功！已自动登录，数据同步中...', 'success');
-                                        await reloadCloudData();
-                                    }
+                                    try {
+                                        const s2Result = await Promise.race([
+                                            supabaseClient.auth.getSession(),
+                                            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+                                        ]);
+                                        const s2 = s2Result?.data?.session;
+                                        if (s2 && s2.user) {
+                                            updateAuthUI(s2.user);
+                                            showToast('邮箱验证成功！已自动登录，数据同步中...', 'success');
+                                            await reloadCloudData();
+                                        }
+                                    } catch (e) { console.warn('[Auth] 验证回调延迟恢复失败:', e.message); }
                                 }, 1000);
                             }
-                            // 清除 URL 中的验证参数
                             if (window.history && window.history.replaceState) {
                                 const cleanUrl = window.location.href.split('?')[0].split('#')[0];
                                 window.history.replaceState({}, '', cleanUrl);
@@ -164,15 +193,18 @@
 
 
         // 等待云端就绪（带超时）
-        async function waitForCloud(ms = 5000) {
+        async function waitForCloud(ms = 8000) {
             if (cloudReady) return true;
             try {
                 const result = await Promise.race([
                     initSupabase(),
-                    new Promise(r => setTimeout(() => r(false), ms))
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('waitForCloud timeout')), ms))
                 ]);
                 return result === true;
-            } catch {
+            } catch (e) {
+                console.warn('[Cloud] 初始化超时或失败:', e.message);
+                // 重置缓存，允许下次重试
+                cloudInitPromise = null;
                 return false;
             }
         }
@@ -224,6 +256,7 @@
             } else {
                 currentUser = null;
                 isAdmin = false;
+                _userWhitelist = false;
                 adminViewUserId = null;
                 updateViewingBadge();
                 if (loginBtn) loginBtn.style.display = 'inline-flex';
@@ -425,7 +458,33 @@
             const ok = await waitForCloud();
             if (!ok) { showToast('云端连接失败', 'error'); return null; }
 
-            const { data: { session } } = await supabaseClient.auth.getSession();
+            // 先刷新 session，防止 token 过期导致 Edge Function 403
+            try {
+                const refreshResult = await Promise.race([
+                    supabaseClient.auth.refreshSession(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('refreshSession timeout')), 8000))
+                ]);
+                if (refreshResult.error) {
+                    console.warn('[ManageUsers] 刷新 session 失败:', refreshResult.error.message);
+                } else if (refreshResult.data?.session) {
+                    console.log('[ManageUsers] session 已刷新');
+                }
+            } catch (refreshErr) {
+                console.warn('[ManageUsers] 刷新 session 超时:', refreshErr.message);
+            }
+
+            let session = null;
+            try {
+                const sessionResult = await Promise.race([
+                    supabaseClient.auth.getSession(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), 5000))
+                ]);
+                session = sessionResult?.data?.session || null;
+            } catch (timeoutErr) {
+                console.warn('[ManageUsers] getSession 超时:', timeoutErr.message);
+                showToast('会话验证超时，请刷新后重试', 'error');
+                return null;
+            }
             if (!session) { showToast('请先登录', 'error'); return null; }
 
             try {
@@ -438,10 +497,20 @@
                     body: JSON.stringify({ action, payload }),
                 });
                 const result = await resp.json();
-                if (!resp.ok) throw new Error(result.error || '操作失败');
+                if (!resp.ok) {
+                    const errMsg = result.error || `HTTP ${resp.status}`;
+                    console.error('[ManageUsers] 请求失败:', resp.status, result);
+                    throw new Error(errMsg);
+                }
                 return result;
             } catch (e) {
+                console.error('[ManageUsers] 异常:', e);
                 showToast('操作失败: ' + e.message, 'error');
+                // 将详细错误也写入状态区域（如果调用方有状态元素）
+                const statusEl = document.getElementById('apiKeysSyncStatus');
+                if (statusEl && action === 'sync_api_keys') {
+                    statusEl.innerHTML = `<span style="color:#f87171;">❌ 同步失败: ${e.message}</span>`;
+                }
                 return null;
             }
         }
@@ -450,10 +519,14 @@
         function showConfirm(message, callback) {
             document.getElementById('confirmMessage').textContent = message;
             _confirmCallback = callback;
-            document.getElementById('confirmOverlay').style.display = 'flex';
+            const overlay = document.getElementById('confirmOverlay');
+            overlay.style.display = 'flex';
+            overlay.classList.add('active');
         }
         function closeConfirm() {
-            document.getElementById('confirmOverlay').style.display = 'none';
+            const overlay = document.getElementById('confirmOverlay');
+            overlay.classList.remove('active');
+            setTimeout(() => { overlay.style.display = 'none'; }, 200);
             _confirmCallback = null;
         }
         function executeConfirm() {
@@ -664,7 +737,9 @@
 
         // 删除用户
         async function deleteUser(userId, email) {
+            console.log('[DeleteUser] 被调用:', userId, email);
             showConfirm(`确定要删除用户 ${email} 吗？此操作将永久删除该用户的账户和所有数据，不可恢复！`, async () => {
+                showToast('正在删除...', 'info');
                 const result = await callManageUsers('delete_user', { user_id: userId });
                 if (result) {
                     // 如果正在查看该用户，切换回自己
@@ -674,6 +749,8 @@
                     }
                     await loadAdminUsers();
                     showToast('用户已删除', 'success');
+                } else {
+                    showToast('删除失败，请确认已登录并拥有管理员权限', 'error');
                 }
             });
         }
@@ -864,9 +941,17 @@
 
                 if (data && data.status === 'whitelist' && data.api_keys) {
                     console.log('[Whitelist] 自动加载管理员 API Keys');
+                    _userWhitelist = true;
                     Object.entries(data.api_keys).forEach(([p, key]) => {
                         localStorage.setItem(p + '_api_key', key);
                     });
+                    // 同步 Groq key 到智能推荐配置
+                    if (data.api_keys.groq) {
+                        const aiConfig = getAIConfig();
+                        aiConfig.apiKey = data.api_keys.groq;
+                        aiConfig.enabled = true;
+                        saveAIConfig(aiConfig);
+                    }
                     // 如果图片反推页面已渲染，刷新 API Key 输入框
                     refreshApiKeyInputs();
                     showToast('已自动加载管理员提供的 API Keys ✓', 'success');
@@ -2471,6 +2556,12 @@
         const SMART_BATCH_SIZE = 20;        // 每批展示数量
 
         function openSmartSearch(categoryId) {
+            // 白名单校验：仅白名单用户和管理员可使用智能推荐
+            if (!isAdmin && !_userWhitelist) {
+                showToast('智能推荐仅限白名单用户使用，请联系管理员', 'warning');
+                return;
+            }
+
             smartSearchTargetCategoryId = categoryId;
             smartSearchSelectedWords = new Set();
             _smartSearchDisplayPool = [];
@@ -2537,6 +2628,10 @@
         }
 
         async function doSmartSearch() {
+            if (!isAdmin && !_userWhitelist) {
+                showToast('智能推荐仅限白名单用户使用', 'warning');
+                return;
+            }
             const keyword = document.getElementById('smartSearchKeyword').value.trim();
             if (!keyword) {
                 showToast('请输入搜索关键词', 'warning');
@@ -3015,6 +3110,26 @@ ${sampleStr}
             const apiKeyInput = document.getElementById('aiApiKey');
             const groqConfig = document.getElementById('aiGroqConfig');
             const statusHint = document.getElementById('aiStatusHint');
+            const configPanel = document.getElementById('smartSearchAIConfig');
+            const saveBtn = apiKeyInput?.nextElementSibling;
+
+            // 非白名单用户：隐藏自填配置，显示权限提示
+            if (!isAdmin && !_userWhitelist) {
+                if (providerSelect) providerSelect.style.display = 'none';
+                if (groqConfig) groqConfig.style.display = 'none';
+                if (apiKeyInput) apiKeyInput.style.display = 'none';
+                if (saveBtn) saveBtn.style.display = 'none';
+                if (statusHint) statusHint.innerHTML = '<span style="color:#fbbf24;">🔒 智能推荐仅限白名单用户使用，请联系管理员开通</span>';
+                if (configPanel) configPanel.style.display = 'none';
+                return;
+            }
+
+            // 白名单/管理员：正常显示配置
+            if (providerSelect) providerSelect.style.display = '';
+            if (groqConfig) groqConfig.style.display = 'flex';
+            if (apiKeyInput) apiKeyInput.style.display = '';
+            if (saveBtn) saveBtn.style.display = '';
+            if (configPanel) configPanel.style.display = '';
 
             if (providerSelect) providerSelect.value = config.provider || 'groq';
             if (apiKeyInput) apiKeyInput.value = config.apiKey || '';
@@ -3037,6 +3152,7 @@ ${sampleStr}
         }
 
         function toggleAIConfig() {
+            if (!isAdmin && !_userWhitelist) return;
             const panel = document.getElementById('smartSearchAIConfig');
             if (panel) {
                 const isVisible = panel.style.display !== 'none';
@@ -3056,6 +3172,10 @@ ${sampleStr}
         }
 
         function saveAIKey() {
+            if (!isAdmin && !_userWhitelist) {
+                showToast('API Key 配置仅限白名单用户使用', 'warning');
+                return;
+            }
             const apiKey = document.getElementById('aiApiKey').value.trim();
             const config = getAIConfig();
             config.apiKey = apiKey;
