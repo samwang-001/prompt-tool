@@ -7988,14 +7988,36 @@ ${keywordsList}
                 width: String(width),
                 height: String(height),
                 seed: String(seed),
-                model: model,
-                nologo: 'true'
+                model: model
             });
             const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
             console.log('[ImageGen] 请求:', url);
 
+            let resp;
+            let lastError;
             try {
-                const resp = await fetch(url);
+                // 免费额度限流时自动重试，最多3次
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        resp = await fetch(url);
+                        if (resp.status === 402 && attempt < 2) {
+                            // 限流，等待后重试
+                            const waitSec = (attempt + 1) * 4;
+                            loading.querySelector('p').textContent = `免费额度排队中，${waitSec}秒后重试...`;
+                            await new Promise(r => setTimeout(r, waitSec * 1000));
+                            continue;
+                        }
+                        break;
+                    } catch (fetchErr) {
+                        lastError = fetchErr;
+                        if (attempt < 2) {
+                            await new Promise(r => setTimeout(r, 3000));
+                            continue;
+                        }
+                        throw fetchErr;
+                    }
+                }
+                if (resp.status === 402) throw new Error('免费额度排队繁忙，请稍后重试或切换到 Turbo 模型');
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const blob = await resp.blob();
                 if (blob.size < 100) throw new Error('生成的图片无效');
