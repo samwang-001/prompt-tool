@@ -390,9 +390,26 @@
                             <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
                                 <div style="flex:1;">
                                     <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.25rem;display:block;">模型</label>
-                                    <select id="imageGenModel" class="mini-select">
-                                        <option value="turbo">Turbo (免费·快速)</option>
-                                        <option value="flux">Flux (高质量·需付费)</option>
+                                    <select id="imageGenModel" class="mini-select model-select">
+                                        <optgroup label="📡 Pollinations (免费·无Key)">
+                                            <option value="pollinations::turbo" selected>Turbo — 快速免费</option>
+                                        </optgroup>
+                                        <optgroup label="☁️ Puter.js (免费·无Key)">
+                                            <option value="puter::gpt-image-1-mini">GPT Image 1 Mini — OpenAI 快速</option>
+                                            <option value="puter::gpt-image-2">GPT Image 2 — OpenAI 最新</option>
+                                            <option value="puter::dall-e-3">DALL·E 3 — OpenAI 经典</option>
+                                            <option value="puter::gemini-2.5-flash-image-preview">Gemini 2.5 Flash — Google</option>
+                                            <option value="puter::stabilityai/stable-diffusion-3-medium">Stable Diffusion 3 — 写实</option>
+                                            <option value="puter::stabilityai/stable-diffusion-xl-base-1.0">SDXL — 经典</option>
+                                            <option value="puter::black-forest-labs/flux-schnell">Flux Schnell — 极速4步</option>
+                                            <option value="puter::black-forest-labs/flux-1.1-pro">Flux 1.1 Pro — 高质量</option>
+                                            <option value="puter::ideogram/ideogram-3.0">Ideogram 3.0 — 文字渲染</option>
+                                            <option value="puter::Lykon/DreamShaper">DreamShaper — 艺术风格</option>
+                                            <option value="puter::RunDiffusion/Juggernaut-pro-flux">Juggernaut Pro — 写实人像</option>
+                                            <option value="puter::Qwen/Qwen-Image">Qwen Image — 阿里通义</option>
+                                            <option value="puter::HiDream-ai/HiDream-I1-Full">HiDream I1 — 全参数</option>
+                                            <option value="puter::ByteDance-Seed/Seedream-4.0">Seedream 4.0 — 字节最新</option>
+                                        </optgroup>
                                     </select>
                                 </div>
                                 <div style="flex:1;">
@@ -404,7 +421,7 @@
                                 🎨 生成图片
                             </button>
                             <div class="image-gen-hint">
-                                使用 <a href="https://pollinations.ai" target="_blank">Pollinations.ai</a> 免费 API，Turbo 模型免费用，Flux 需付费
+                                Pollinations Turbo 免费 · Puter.js 提供 14 款免费模型 · 无需 API Key
                             </div>
                         </div>
                     </div>
@@ -702,6 +719,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://js.puter.com/v2/"></script>
     <script src="app.js"></script>
 </body>
 </html>

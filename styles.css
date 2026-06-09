@@ -3903,10 +3903,29 @@
             color: var(--text-primary);
             font-size: 0.85rem;
             cursor: pointer;
+            font-family: inherit;
         }
         .mini-select:focus {
             outline: none;
             border-color: var(--primary);
+        }
+        .mini-select optgroup {
+            font-style: normal;
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--bg);
+            font-size: 0.8rem;
+            padding: 0.25rem 0;
+        }
+        .mini-select option {
+            background: var(--bg);
+            color: var(--text-primary);
+            padding: 0.3rem 0.5rem;
+            font-size: 0.82rem;
+        }
+        .model-select {
+            font-size: 0.82rem;
+            max-width: 100%;
         }
         .mini-input {
             width: 100%;

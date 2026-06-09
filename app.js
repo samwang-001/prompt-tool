@@ -7846,6 +7846,113 @@ ${keywordsList}
         let imageGenHistory = [];
         let _isImageGenRunning = false;
 
+        // Provider & Model 定义
+        const IMAGE_GEN_PROVIDERS = {
+            pollinations: {
+                name: 'Pollinations',
+                icon: '📡',
+                base: 'pollinations',
+                // Pollinations: GET https://image.pollinations.ai/prompt/{prompt}?width=&height=&seed=&model=
+                async generate(prompt, modelId, width, height, seed) {
+                    const params = new URLSearchParams({
+                        width: String(width),
+                        height: String(height),
+                        seed: String(seed),
+                        model: modelId
+                    });
+                    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
+                    console.log('[ImageGen:Pollinations] 请求:', url);
+
+                    let resp;
+                    for (let attempt = 0; attempt < 3; attempt++) {
+                        try {
+                            resp = await fetch(url);
+                            if (resp.status === 402 && attempt < 2) {
+                                const waitSec = (attempt + 1) * 4;
+                                console.log(`[ImageGen:Pollinations] 402 限流，${waitSec}秒后重试...`);
+                                await new Promise(r => setTimeout(r, waitSec * 1000));
+                                continue;
+                            }
+                            break;
+                        } catch (fetchErr) {
+                            if (attempt < 2) {
+                                await new Promise(r => setTimeout(r, 3000));
+                                continue;
+                            }
+                            throw fetchErr;
+                        }
+                    }
+                    if (resp.status === 402) throw new Error('Pollinations 免费额度繁忙，请稍后重试');
+                    if (!resp.ok) throw new Error(`Pollinations HTTP ${resp.status}`);
+                    const blob = await resp.blob();
+                    if (blob.size < 100) throw new Error('生成的图片无效');
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = () => reject(new Error('图片数据读取失败'));
+                        reader.readAsDataURL(blob);
+                    });
+                }
+            },
+            puter: {
+                name: 'Puter.js',
+                icon: '☁️',
+                base: 'puter',
+                // Puter.js: puter.ai.txt2img(prompt, { model }) -> HTMLImageElement
+                async generate(prompt, modelId, width, height, _seed) {
+                    if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
+                        throw new Error('Puter.js 未加载，请检查网络或刷新页面重试');
+                    }
+                    console.log(`[ImageGen:Puter] 模型: ${modelId}, 尺寸: ${width}×${height}`);
+                    const img = await puter.ai.txt2img(prompt, {
+                        model: modelId
+                    });
+                    if (!img || !img.src) {
+                        throw new Error('Puter.js 返回结果为空');
+                    }
+                    // img.src is a data URL
+                    if (img.src.startsWith('data:')) {
+                        console.log('[ImageGen:Puter] 生成成功, 尺寸:', img.naturalWidth, '×', img.naturalHeight);
+                        return img.src;
+                    }
+                    // Sometimes returns URL instead of data URL
+                    const resp = await fetch(img.src);
+                    if (!resp.ok) throw new Error(`Puter 图片下载失败 HTTP ${resp.status}`);
+                    const blob = await resp.blob();
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = () => reject(new Error('图片数据读取失败'));
+                        reader.readAsDataURL(blob);
+                    });
+                }
+            }
+        };
+
+        // 从 value="provider::modelId" 解析出 provider 和 modelId
+        function parseModelValue(val) {
+            const idx = val.indexOf('::');
+            if (idx === -1) {
+                // 兼容旧的简单值
+                return { provider: 'pollinations', modelId: val };
+            }
+            return {
+                provider: val.substring(0, idx),
+                modelId: val.substring(idx + 2)
+            };
+        }
+
+        // 格式化模型名称用于历史记录展示
+        function formatModelDisplay(rawModel, modelId) {
+            if (!rawModel && !modelId) return 'unknown';
+            // 优先用 modelId（短名称）
+            const id = modelId || rawModel;
+            // 提取模型短名称
+            if (id.includes('/')) return id.split('/').pop();
+            if (id.length > 25) return id.substring(0, 22) + '...';
+            return id;
+        }
+
         function loadImageGenHistory() {
             try {
                 const raw = localStorage.getItem(IMAGE_GEN_HISTORY_KEY);
@@ -7961,7 +8068,6 @@ ${keywordsList}
             _isImageGenRunning = true;
             const btn = document.getElementById('imageGenBtn');
             const loading = document.getElementById('imageGenLoading');
-            const resultArea = document.getElementById('imageGenResultArea');
             btn.disabled = true;
             btn.textContent = '⏳ 生成中...';
             loading.style.display = 'flex';
@@ -7980,73 +8086,58 @@ ${keywordsList}
 
             const width = parseInt(document.getElementById('imageGenWidth').value) || 1024;
             const height = parseInt(document.getElementById('imageGenHeight').value) || 1024;
-            const model = document.getElementById('imageGenModel').value;
+            const rawModel = document.getElementById('imageGenModel').value;
+            const { provider: providerKey, modelId } = parseModelValue(rawModel);
             const seedInput = document.getElementById('imageGenSeed').value.trim();
             const seed = seedInput ? parseInt(seedInput) : Math.floor(Math.random() * 2147483647);
 
-            const params = new URLSearchParams({
-                width: String(width),
-                height: String(height),
-                seed: String(seed),
-                model: model
-            });
-            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
-            console.log('[ImageGen] 请求:', url);
+            const provider = IMAGE_GEN_PROVIDERS[providerKey];
+            const providerName = provider ? provider.name : providerKey;
+            console.log(`[ImageGen] Provider: ${providerName}, Model: ${modelId}, Size: ${width}×${height}`);
 
-            let resp;
-            let lastError;
+            // 更新 loading 文字
+            loading.querySelector('p').textContent = `${providerName} 正在生成...`;
+
             try {
-                // 免费额度限流时自动重试，最多3次
-                for (let attempt = 0; attempt < 3; attempt++) {
-                    try {
-                        resp = await fetch(url);
-                        if (resp.status === 402 && attempt < 2) {
-                            // 限流，等待后重试
-                            const waitSec = (attempt + 1) * 4;
-                            loading.querySelector('p').textContent = `免费额度排队中，${waitSec}秒后重试...`;
-                            await new Promise(r => setTimeout(r, waitSec * 1000));
-                            continue;
-                        }
-                        break;
-                    } catch (fetchErr) {
-                        lastError = fetchErr;
-                        if (attempt < 2) {
-                            await new Promise(r => setTimeout(r, 3000));
-                            continue;
-                        }
-                        throw fetchErr;
+                if (!provider) {
+                    throw new Error(`未知的生成引擎: ${providerKey}`);
+                }
+
+                let base64 = await provider.generate(prompt, modelId, width, height, seed);
+
+                const item = {
+                    id: Date.now(),
+                    prompt,
+                    width,
+                    height,
+                    model: rawModel,
+                    provider: providerKey,
+                    modelId,
+                    seed,
+                    base64,
+                    time: new Date().toISOString()
+                };
+                saveImageGenToHistory(item);
+                renderImageGenResults();
+                _isImageGenRunning = false;
+                btn.disabled = false;
+                btn.textContent = '🎨 生成图片';
+                loading.style.display = 'none';
+                showToast(`✓ ${providerName}:${modelId} 生成成功`, 'success');
+            } catch (e) {
+                console.error(`[ImageGen] ${providerName} 失败:`, e);
+                let msg = e.message;
+                // 针对 Puter.js 常见错误给出友好提示
+                if (providerKey === 'puter') {
+                    if (msg.includes('未加载')) {
+                        msg = 'Puter.js 加载失败，请刷新页面或切换到 Pollinations Turbo 重试';
+                    } else if (msg.includes('credit') || msg.includes('quota') || msg.includes('limit')) {
+                        msg = `Puter.js 免费额度用尽，请切换到 Pollinations Turbo 或其他模型`;
+                    } else if (msg.includes('timeout') || msg.includes('timed out')) {
+                        msg = `Puter.js 请求超时，请重试或切换到 Pollinations Turbo`;
                     }
                 }
-                if (resp.status === 402) throw new Error('免费额度排队繁忙，请稍后重试或切换到 Turbo 模型');
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const blob = await resp.blob();
-                if (blob.size < 100) throw new Error('生成的图片无效');
-
-                const reader = new FileReader();
-                reader.onload = function() {
-                    const base64 = reader.result;
-                    const item = {
-                        id: Date.now(),
-                        prompt,
-                        width,
-                        height,
-                        model,
-                        seed,
-                        base64,
-                        time: new Date().toISOString()
-                    };
-                    saveImageGenToHistory(item);
-                    renderImageGenResults();
-                    _isImageGenRunning = false;
-                    btn.disabled = false;
-                    btn.textContent = '🎨 生成图片';
-                    loading.style.display = 'none';
-                    showToast('图片生成成功 ✓', 'success');
-                };
-                reader.readAsDataURL(blob);
-            } catch (e) {
-                console.error('[ImageGen] 生成失败:', e);
-                showToast('生成失败: ' + e.message, 'error');
+                showToast(`生成失败: ${msg}`, 'error');
                 _isImageGenRunning = false;
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
@@ -8086,7 +8177,7 @@ ${keywordsList}
                                 <div class="image-gen-item-prompt" title="${escapeHtml(item.prompt)}">${escapeHtml(item.prompt.substring(0, 60))}${item.prompt.length > 60 ? '...' : ''}</div>
                                 <div class="image-gen-item-meta">
                                     <span>${item.width}×${item.height}</span>
-                                    <span>${item.model || 'flux'}</span>
+                                    <span>${formatModelDisplay(item.model || '', item.modelId || '')}</span>
                                     <span>seed:${item.seed}</span>
                                 </div>
                                 <div class="image-gen-item-actions">
@@ -8112,7 +8203,7 @@ ${keywordsList}
                     <img src="${item.base64}" alt="${escapeHtml(item.prompt)}">
                     <div class="image-gen-preview-info">
                         <p>${escapeHtml(item.prompt)}</p>
-                        <small>${item.width}×${item.height} · ${item.model || 'flux'} · seed:${item.seed}</small>
+                        <small>${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}</small>
                     </div>
                 </div>`;
             document.body.appendChild(overlay);
