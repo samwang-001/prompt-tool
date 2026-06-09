@@ -18,6 +18,7 @@
         let currentUser = null;       // { id, email, user_metadata }
         let isAdmin = false;          // 是否为管理员
         let _userWhitelist = false;   // 当前用户是否是白名单用户
+        let _whitelistKeysLoaded = {}; // 记录哪些 provider 的 Key 来自管理员/白名单配置（provider → true）
         let adminViewUserId = null;   // 管理员正在查看的用户ID（null=看自己的数据）
         let _adminUsersCache = null;  // 管理员面板用户列表缓存
         let _dataGen = 0;             // 数据代数计数器，切换用户时递增，防止异步保存覆盖
@@ -259,6 +260,7 @@
                 currentUser = null;
                 isAdmin = false;
                 _userWhitelist = false;
+                _whitelistKeysLoaded = {};
                 adminViewUserId = null;
                 updateViewingBadge();
                 loginBtn?.style && (loginBtn.style.display = 'inline-flex');
@@ -946,10 +948,16 @@
                 // 管理员和白名单用户都自动加载 API Keys
                 if (isAdmin || data.status === 'whitelist') {
                     const who = isAdmin ? '管理员' : '白名单用户';
-                    console.log(`[APIKeys] 自动加载 ${who} API Keys`);
+                    const providers = Object.keys(data.api_keys);
+                    console.log(`[APIKeys] 自动加载 ${who} API Keys:`, providers.join(', '));
+                    
+                    // 记录每个 provider 的 Key 来自管理员/白名单配置
+                    _whitelistKeysLoaded = {};
                     Object.entries(data.api_keys).forEach(([p, key]) => {
                         localStorage.setItem(p + '_api_key', key);
+                        _whitelistKeysLoaded[p] = true;
                     });
+                    
                     // 同步 Groq key 到智能推荐配置
                     if (data.api_keys.groq) {
                         const aiConfig = getAIConfig();
@@ -959,7 +967,11 @@
                     }
                     // 如果图片反推页面已渲染，刷新 API Key 输入框
                     refreshApiKeyInputs();
-                    showToast(`已自动加载 API Keys ✓`, 'success');
+                    
+                    // 加强反馈：告知用户 Keys 已就绪，可点击"验证并保存"测试
+                    const providerNames = { zhipu: '智谱', gemini: 'Gemini', kimi: 'Kimi', qwen: '千问', groq: 'Groq' };
+                    const loadedList = providers.map(p => providerNames[p] || p).join('、');
+                    showToast(`✅ API Keys 已同步（${loadedList}），可直接使用`, 'success');
                 }
             } catch (e) {
                 console.warn('[APIKeys] 加载失败:', e.message);
@@ -8706,6 +8718,8 @@ ${keywordsList}
             if (!keyInput) return;
             const key = keyInput.value.trim();
             if (key) {
+                // 用户手动保存：清除白名单来源标记
+                if (_whitelistKeysLoaded) _whitelistKeysLoaded[provider] = false;
                 localStorage.setItem(storageKey, key);
             }
             updateApiKeyStatus();
@@ -8804,12 +8818,14 @@ ${keywordsList}
                 }
                 
                 if (response.ok) {
+                    // 验证成功：清除白名单来源标记（用户已验证通过）
+                    if (_whitelistKeysLoaded) _whitelistKeysLoaded[provider] = false;
                     localStorage.setItem(storageKey, key);
                     if (statusEl) {
-                        statusEl.textContent = '已连接';
-                        statusEl.style.color = 'var(--success)';
+                        statusEl.textContent = '✅ 已验证，已连接';
+                        statusEl.style.color = '#34d399';
                     }
-                    showToast('API Key 验证成功，已保存', 'success');
+                    showToast('API Key 验证成功，已连接', 'success');
                 } else {
                     const errData = await response.json().catch(() => ({}));
                     const errMsg = errData.error?.message || '';
@@ -8850,10 +8866,18 @@ ${keywordsList}
             const storageKey = provider + '_api_key';
             const keyInput = document.getElementById(inputId);
             const savedKey = localStorage.getItem(storageKey);
+            const isFromWhitelist = !!(_whitelistKeysLoaded && _whitelistKeysLoaded[provider]);
             
+            // 区分三种状态：管理员配置的Key、用户手动保存的Key、未配置
             if (savedKey && keyInput && keyInput.value.trim() === savedKey) {
-                statusEl.textContent = '已保存';
-                statusEl.style.color = 'var(--success)';
+                if (isFromWhitelist) {
+                    statusEl.textContent = '✅ 已连接（管理员配置）';
+                    statusEl.style.color = '#34d399';
+                    statusEl.title = 'Key 由管理员统一配置，点击"验证并保存"可测试连通性';
+                } else {
+                    statusEl.textContent = '已保存';
+                    statusEl.style.color = 'var(--success)';
+                }
             } else if (keyInput && keyInput.value.trim()) {
                 statusEl.textContent = '未保存';
                 statusEl.style.color = '#f59e0b';
