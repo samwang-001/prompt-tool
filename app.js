@@ -8120,7 +8120,10 @@ ${keywordsList}
             console.log(`[ImageGen] Provider: ${providerName}, Model: ${modelId}, Size: ${width}×${height}`);
 
             // 更新 loading 文字
-            loading.querySelector('p').textContent = `${providerName} 正在生成...`;
+            const loadingTitle = loading.querySelector('p');
+            const loadingSub = loading.querySelector('small');
+            if (loadingTitle) loadingTitle.textContent = `${providerName} 正在创作...`;
+            if (loadingSub) loadingSub.textContent = '通常需要 5-30 秒';
 
             try {
                 if (!provider) {
@@ -8224,12 +8227,16 @@ ${keywordsList}
             overlay.className = 'image-gen-preview-overlay';
             overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
             overlay.innerHTML = `
-                <div class="image-gen-preview-box">
+                <div class="image-gen-preview-box" onclick="event.stopPropagation()">
                     <span class="image-gen-preview-close" onclick="this.closest('.image-gen-preview-overlay').remove()">✕</span>
                     <img src="${item.base64}" alt="${escapeHtml(item.prompt)}">
                     <div class="image-gen-preview-info">
                         <p>${escapeHtml(item.prompt)}</p>
                         <small>${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}</small>
+                        <div style="margin-top:0.65rem;display:flex;gap:0.5rem;justify-content:center;">
+                            <button class="btn btn-ghost btn-sm" onclick="downloadImageGenItem(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">⬇ 下载</button>
+                            <button class="btn btn-ghost btn-sm" onclick="copyImageGenPrompt(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">📋 复制提示词</button>
+                        </div>
                     </div>
                 </div>`;
             document.body.appendChild(overlay);
