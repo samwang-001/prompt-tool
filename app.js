@@ -7996,8 +7996,37 @@ ${keywordsList}
         function saveImageGenToHistory(item) {
             loadImageGenHistory();
             imageGenHistory.unshift(item);
-            if (imageGenHistory.length > 50) imageGenHistory.length = 50;
-            localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
+            if (imageGenHistory.length > 5) imageGenHistory.length = 5;
+            try {
+                localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
+            } catch (e) {
+                // localStorage 溢出：逐条淘汰最旧记录再试
+                if (e.name === 'QuotaExceededError' || e.message.includes('quota') || e.message.includes('exceeded')) {
+                    console.warn('[ImageGenHistory] localStorage 溢出，开始自动清理旧记录');
+                    while (imageGenHistory.length > 1) {
+                        imageGenHistory.pop(); // 移除最旧
+                        try {
+                            localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
+                            console.log('[ImageGenHistory] 清理后成功保存, 剩余:', imageGenHistory.length);
+                            return;
+                        } catch (e2) {
+                            if (imageGenHistory.length <= 1) break;
+                        }
+                    }
+                    // 只剩一条也存不下，清空所有历史，只保留本次
+                    console.warn('[ImageGenHistory] 单张图片过大，清空历史');
+                    imageGenHistory = [item];
+                    try {
+                        localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
+                    } catch {
+                        console.error('[ImageGenHistory] 单张图片超过 localStorage 上限，无法保存历史');
+                        showToast('图片过大，历史记录未保存', 'warning');
+                    }
+                } else {
+                    console.error('[ImageGenHistory] 保存失败:', e.message);
+                    showToast('历史记录保存失败', 'warning');
+                }
+            }
         }
 
         // 更新尺寸标签和隐藏字段
@@ -8153,7 +8182,10 @@ ${keywordsList}
                     base64,
                     time: new Date().toISOString()
                 };
-                saveImageGenToHistory(item);
+                try { saveImageGenToHistory(item); } catch (saveErr) {
+                    console.warn('[ImageGen] 历史保存失败:', saveErr);
+                    // 不影响主流程：图片已经生成，只是存不进历史
+                }
                 renderImageGenResults();
                 _isImageGenRunning = false;
                 btn.disabled = false;
