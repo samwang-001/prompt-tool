@@ -8177,36 +8177,69 @@ ${keywordsList}
                 w = parseInt(exactMatch[1]);
                 h = parseInt(exactMatch[2]);
                 hint = `${w}×${h}`;
-                // Clamp to valid range
                 w = Math.max(256, Math.min(2048, w));
                 h = Math.max(256, Math.min(2048, h));
                 return { width: w, height: h, hint };
             }
 
-            // 2. 分辨率关键词
-            if (/\b4k\b|ultra\s*hd|uhd\b/.test(t)) { w = 2048; h = 1152; hint = '4K (2048×1152)'; }
-            else if (/\b2k\b|qhd\b/.test(t)) { w = 2048; h = 1152; hint = '2K (2048×1152)'; }
-            else if (/\b1080p\b|full\s*hd\b|fhd\b/.test(t)) { w = 1920; h = 1080; hint = '1080p (1920×1080)'; }
-            else if (/\b720p\b|\bhd\b/.test(t)) { w = 1280; h = 720; hint = '720p (1280×720)'; }
+            // 2. 数字比例关键词（优先级最高）：16:9, 16比9, 16/9, 16：9（中文冒号）等
+            //    同时支持中文"比"字和中文冒号
+            const ratioMatch = t.match(/(\d{1,2})\s*[：:∶比\/]\s*(\d{1,2})/);
+            if (ratioMatch) {
+                const rw = parseInt(ratioMatch[1]);
+                const rh = parseInt(ratioMatch[2]);
+                // 映射常见比例到具体像素尺寸
+                const ratioKey = `${rw}:${rh}`;
+                const ratioMap = {
+                    '21:9': [1680, 720, '21:9 超宽屏'],
+                    '16:9': [1280, 720, '16:9 宽屏'],
+                    '3:2': [1200, 800, '3:2'],
+                    '4:3': [1200, 900, '4:3'],
+                    '1:1': [1024, 1024, '1:1 方形'],
+                    '4:5': [1024, 1280, '4:5'],
+                    '5:4': [1280, 1024, '5:4'],
+                    '3:4': [900, 1200, '3:4'],
+                    '2:3': [800, 1200, '2:3'],
+                    '9:16': [720, 1280, '9:16 竖屏'],
+                };
+                if (ratioMap[ratioKey]) {
+                    [w, h, hint] = ratioMap[ratioKey];
+                } else {
+                    // 未知比例：按比例缩放到 ~1MP
+                    const total = rw + rh;
+                    const base = 1024;
+                    w = Math.round(base * rw / total);
+                    h = Math.round(base * rh / total);
+                    hint = `${rw}:${rh}`;
+                }
+            }
 
-            // 3. 比例关键词
-            else if (/\b21:9\b|ultrawide|超宽/.test(t)) { w = 1680; h = 720; hint = '21:9 超宽屏'; }
-            else if (/\b16:9\b|widescreen|宽屏|横屏|landscape|banner|横版/.test(t)) { w = 1280; h = 720; hint = '16:9 宽屏'; }
-            else if (/\b3:2\b/.test(t)) { w = 1200; h = 800; hint = '3:2'; }
-            else if (/\b4:3\b/.test(t)) { w = 1200; h = 900; hint = '4:3'; }
-            else if (/\b1:1\b|square|正方形|方形/.test(t)) { w = 1024; h = 1024; hint = '1:1 方形'; }
-            else if (/\b4:5\b/.test(t)) { w = 1024; h = 1280; hint = '4:5 (1024×1280)'; }
-            else if (/\b3:4\b/.test(t)) { w = 900; h = 1200; hint = '3:4'; }
-            else if (/\b2:3\b/.test(t)) { w = 800; h = 1200; hint = '2:3'; }
-            else if (/\b9:16\b|portrait|竖向|竖屏|故事|story|竖版/.test(t)) { w = 720; h = 1280; hint = '9:16 竖屏'; }
+            // 3. 分辨率关键词
+            if (!w || !h) {
+                if (/\b4k\b|ultra\s*hd|uhd\b/.test(t)) { w = 2048; h = 1152; hint = '4K (2048×1152)'; }
+                else if (/\b2k\b|qhd\b/.test(t)) { w = 2048; h = 1152; hint = '2K (2048×1152)'; }
+                else if (/\b1080p\b|full\s*hd\b|fhd\b/.test(t)) { w = 1920; h = 1080; hint = '1080p (1920×1080)'; }
+                else if (/\b720p\b|\bhd\b/.test(t)) { w = 1280; h = 720; hint = '720p (1280×720)'; }
+            }
 
-            // 4. 中文语义
-            else if (/海报|poster/.test(t)) { w = 800; h = 1200; hint = '海报 (2:3)'; }
-            else if (/手机壁纸|壁纸|wallpaper/.test(t)) { w = 720; h = 1280; hint = '手机壁纸 (9:16)'; }
-            else if (/头像|avatar|pfp/.test(t)) { w = 1024; h = 1024; hint = '头像 (1:1)'; }
-            else if (/封面|cover/.test(t) && !/手机/.test(t)) { w = 1280; h = 720; hint = '封面 (16:9)'; }
-            else if (/a4/.test(t)) { w = 1200; h = 1697; hint = 'A4 比例'; }
-            else if (/卡片|card/.test(t)) { w = 1200; h = 900; hint = '卡片 (4:3)'; }
+            // 4. 中英文语义关键词
+            if (!w || !h) {
+                if (/\b21:9\b|ultrawide|超宽|超宽屏/.test(t)) { w = 1680; h = 720; hint = '21:9 超宽屏'; }
+                else if (/\b16:9\b|widescreen|宽屏|横屏|landscape|banner|横版|横图|横向/.test(t)) { w = 1280; h = 720; hint = '16:9 宽屏'; }
+                else if (/\b4:3\b/.test(t)) { w = 1200; h = 900; hint = '4:3'; }
+                else if (/\b3:2\b/.test(t)) { w = 1200; h = 800; hint = '3:2'; }
+                else if (/\b1:1\b|square|正方形|方形|1比1|一比一/.test(t)) { w = 1024; h = 1024; hint = '1:1 方形'; }
+                else if (/\b4:5\b/.test(t)) { w = 1024; h = 1280; hint = '4:5 (1024×1280)'; }
+                else if (/\b3:4\b/.test(t)) { w = 900; h = 1200; hint = '3:4'; }
+                else if (/\b2:3\b/.test(t)) { w = 800; h = 1200; hint = '2:3'; }
+                else if (/\b9:16\b|portrait|竖向|竖屏|故事|story|竖版|竖图|纵向/.test(t)) { w = 720; h = 1280; hint = '9:16 竖屏'; }
+                else if (/海报|poster/.test(t)) { w = 800; h = 1200; hint = '海报 (2:3)'; }
+                else if (/手机壁纸|壁纸|wallpaper/.test(t)) { w = 720; h = 1280; hint = '手机壁纸 (9:16)'; }
+                else if (/头像|avatar|pfp/.test(t)) { w = 1024; h = 1024; hint = '头像 (1:1)'; }
+                else if (/封面|cover/.test(t) && !/手机/.test(t)) { w = 1280; h = 720; hint = '封面 (16:9)'; }
+                else if (/a4/.test(t)) { w = 1200; h = 1697; hint = 'A4 比例'; }
+                else if (/卡片|card/.test(t)) { w = 1200; h = 900; hint = '卡片 (4:3)'; }
+            }
 
             // 5. 默认 1:1
             if (!w || !h) {
