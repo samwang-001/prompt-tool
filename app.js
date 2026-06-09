@@ -7986,46 +7986,75 @@ ${keywordsList}
             return id;
         }
 
-        function loadImageGenHistory() {
-            try {
-                const raw = localStorage.getItem(IMAGE_GEN_HISTORY_KEY);
-                imageGenHistory = raw ? JSON.parse(raw) : [];
-            } catch { imageGenHistory = []; }
+        // ==================== IndexedDB 图片历史存储 ====================
+        function _openImageGenDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open('PromptToolDB', 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('imageGenHistory')) {
+                        db.createObjectStore('imageGenHistory', { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = () => reject(req.error);
+            });
         }
 
-        function saveImageGenToHistory(item) {
-            loadImageGenHistory();
-            imageGenHistory.unshift(item);
-            if (imageGenHistory.length > 5) imageGenHistory.length = 5;
-            try {
-                localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
-            } catch (e) {
-                // localStorage 溢出：逐条淘汰最旧记录再试
-                if (e.name === 'QuotaExceededError' || e.message.includes('quota') || e.message.includes('exceeded')) {
-                    console.warn('[ImageGenHistory] localStorage 溢出，开始自动清理旧记录');
-                    while (imageGenHistory.length > 1) {
-                        imageGenHistory.pop(); // 移除最旧
-                        try {
-                            localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
-                            console.log('[ImageGenHistory] 清理后成功保存, 剩余:', imageGenHistory.length);
-                            return;
-                        } catch (e2) {
-                            if (imageGenHistory.length <= 1) break;
-                        }
-                    }
-                    // 只剩一条也存不下，清空所有历史，只保留本次
-                    console.warn('[ImageGenHistory] 单张图片过大，清空历史');
-                    imageGenHistory = [item];
-                    try {
-                        localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
-                    } catch {
-                        console.error('[ImageGenHistory] 单张图片超过 localStorage 上限，无法保存历史');
-                        showToast('图片过大，历史记录未保存', 'warning');
-                    }
-                } else {
-                    console.error('[ImageGenHistory] 保存失败:', e.message);
-                    showToast('历史记录保存失败', 'warning');
+        async function loadImageGenHistory() {
+            // 首次运行：从 localStorage 迁移旧数据到 IndexedDB
+            const oldRaw = localStorage.getItem(IMAGE_GEN_HISTORY_KEY);
+            if (oldRaw) {
+                try {
+                    const oldData = JSON.parse(oldRaw);
+                    localStorage.removeItem(IMAGE_GEN_HISTORY_KEY);
+                    const db = await _openImageGenDB();
+                    const tx = db.transaction('imageGenHistory', 'readwrite');
+                    const store = tx.objectStore('imageGenHistory');
+                    for (const item of oldData) store.put(item);
+                    await new Promise(r => { tx.oncomplete = r; });
+                    console.log('[ImageGenDB] 从 localStorage 迁移了', oldData.length, '条记录');
+                } catch (migErr) {
+                    console.warn('[ImageGenDB] localStorage 迁移失败, 保留原数据:', migErr);
+                    imageGenHistory = oldData;
+                    return;
                 }
+            }
+
+            // 从 IndexedDB 读取
+            try {
+                const db = await _openImageGenDB();
+                const tx = db.transaction('imageGenHistory', 'readonly');
+                const store = tx.objectStore('imageGenHistory');
+                const items = await new Promise((resolve, reject) => {
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+                imageGenHistory = items.sort((a, b) => b.id - a.id);
+            } catch (e) {
+                console.warn('[ImageGenDB] 读取失败:', e);
+                imageGenHistory = [];
+            }
+        }
+
+        async function saveImageGenToHistory(item) {
+            imageGenHistory.unshift(item);
+            if (imageGenHistory.length > 20) imageGenHistory.length = 20;
+            try {
+                const db = await _openImageGenDB();
+                const tx = db.transaction('imageGenHistory', 'readwrite');
+                const store = tx.objectStore('imageGenHistory');
+                store.put(item);
+                // 清理超出 20 条的旧记录
+                if (imageGenHistory.length >= 20) {
+                    const toDelete = imageGenHistory.slice(20);
+                    for (const d of toDelete) store.delete(d.id);
+                }
+                await new Promise(r => { tx.oncomplete = r; });
+            } catch (e) {
+                console.error('[ImageGenDB] 保存失败:', e);
+                showToast('历史记录保存失败', 'warning');
             }
         }
 
@@ -8182,11 +8211,10 @@ ${keywordsList}
                     base64,
                     time: new Date().toISOString()
                 };
-                try { saveImageGenToHistory(item); } catch (saveErr) {
+                try { await saveImageGenToHistory(item); } catch (saveErr) {
                     console.warn('[ImageGen] 历史保存失败:', saveErr);
-                    // 不影响主流程：图片已经生成，只是存不进历史
                 }
-                renderImageGenResults();
+                await renderImageGenResults();
                 _isImageGenRunning = false;
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
@@ -8215,8 +8243,8 @@ ${keywordsList}
             }
         }
 
-        function renderImageGenResults() {
-            loadImageGenHistory();
+        async function renderImageGenResults() {
+            await loadImageGenHistory();
             const container = document.getElementById('imageGenResultArea');
             const countEl = document.getElementById('imageGenCount');
             if (!container) return;
@@ -8260,8 +8288,8 @@ ${keywordsList}
                 </div>`;
         }
 
-        function previewImageGenItem(idx) {
-            loadImageGenHistory();
+        async function previewImageGenItem(idx) {
+            await loadImageGenHistory();
             if (idx < 0 || idx >= imageGenHistory.length) return;
             const item = imageGenHistory[idx];
             const overlay = document.createElement('div');
@@ -8283,8 +8311,8 @@ ${keywordsList}
             document.body.appendChild(overlay);
         }
 
-        function downloadImageGenItem(idx) {
-            loadImageGenHistory();
+        async function downloadImageGenItem(idx) {
+            await loadImageGenHistory();
             if (idx < 0 || idx >= imageGenHistory.length) return;
             const item = imageGenHistory[idx];
             const a = document.createElement('a');
@@ -8293,8 +8321,8 @@ ${keywordsList}
             a.click();
         }
 
-        function copyImageGenPrompt(idx) {
-            loadImageGenHistory();
+        async function copyImageGenPrompt(idx) {
+            await loadImageGenHistory();
             if (idx < 0 || idx >= imageGenHistory.length) return;
             const item = imageGenHistory[idx];
             navigator.clipboard.writeText(item.prompt).then(() => {
@@ -8304,11 +8332,19 @@ ${keywordsList}
             });
         }
 
-        function clearImageGenHistory() {
+        async function clearImageGenHistory() {
             if (!confirm('确定要清空所有生成记录吗？')) return;
             imageGenHistory = [];
-            localStorage.removeItem(IMAGE_GEN_HISTORY_KEY);
-            renderImageGenResults();
+            try {
+                const db = await _openImageGenDB();
+                const tx = db.transaction('imageGenHistory', 'readwrite');
+                const store = tx.objectStore('imageGenHistory');
+                store.clear();
+                await new Promise(r => { tx.oncomplete = r; });
+            } catch (e) {
+                console.warn('[ImageGenDB] 清空失败:', e);
+            }
+            await renderImageGenResults();
             showToast('已清空生成记录', 'success');
         }
 
