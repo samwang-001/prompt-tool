@@ -391,24 +391,35 @@
                                 <div style="flex:1;">
                                     <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.25rem;display:block;">模型</label>
                                     <select id="imageGenModel" class="mini-select model-select">
-                                        <optgroup label="📡 Pollinations (免费·无Key)">
-                                            <option value="pollinations::turbo" selected>Turbo — 快速免费</option>
+                                        <optgroup label="📡 Pollinations (免费·限流中)">
+                                            <option value="pollinations::turbo">Turbo — 快速免费(当前拥挤)</option>
                                         </optgroup>
-                                        <optgroup label="☁️ Puter.js (免费·无Key)">
-                                            <option value="puter::gpt-image-1-mini">GPT Image 1 Mini — OpenAI 快速</option>
-                                            <option value="puter::gpt-image-2">GPT Image 2 — OpenAI 最新</option>
-                                            <option value="puter::dall-e-3">DALL·E 3 — OpenAI 经典</option>
-                                            <option value="puter::gemini-2.5-flash-image-preview">Gemini 2.5 Flash — Google</option>
-                                            <option value="puter::stabilityai/stable-diffusion-3-medium">Stable Diffusion 3 — 写实</option>
-                                            <option value="puter::stabilityai/stable-diffusion-xl-base-1.0">SDXL — 经典</option>
-                                            <option value="puter::black-forest-labs/flux-schnell">Flux Schnell — 极速4步</option>
+                                        <optgroup label="☁️ Puter.js — OpenAI">
+                                            <option value="puter::gpt-image-2" selected>GPT Image 2 — 最新</option>
+                                            <option value="puter::gpt-image-1.5">GPT Image 1.5 — 推荐</option>
+                                            <option value="puter::gpt-image-1-mini">GPT Image 1 Mini — 极速</option>
+                                            <option value="puter::dall-e-3">DALL·E 3 — 经典</option>
+                                        </optgroup>
+                                        <optgroup label="☁️ Puter.js — Google">
+                                            <option value="puter::gemini-3.1-flash-image-preview">Gemini 3.1 Flash — 最新</option>
+                                            <option value="puter::gemini-2.5-flash-image-preview">Gemini 2.5 Flash — 稳定</option>
+                                            <option value="puter::google/imagen-4.0-fast">Imagen 4.0 Fast — 极速</option>
+                                            <option value="puter::google/imagen-4.0-preview">Imagen 4.0 Preview</option>
+                                        </optgroup>
+                                        <optgroup label="☁️ Puter.js — Flux 系列">
+                                            <option value="puter::black-forest-labs/flux-schnell">Flux Schnell — 4步极速</option>
                                             <option value="puter::black-forest-labs/flux-1.1-pro">Flux 1.1 Pro — 高质量</option>
+                                        </optgroup>
+                                        <optgroup label="☁️ Puter.js — Stable Diffusion">
+                                            <option value="puter::stabilityai/stable-diffusion-3-medium">SD 3 Medium — 写实</option>
+                                            <option value="puter::stabilityai/stable-diffusion-xl-base-1.0">SDXL — 经典</option>
+                                        </optgroup>
+                                        <optgroup label="☁️ Puter.js — 其他优质模型">
                                             <option value="puter::ideogram/ideogram-3.0">Ideogram 3.0 — 文字渲染</option>
                                             <option value="puter::Lykon/DreamShaper">DreamShaper — 艺术风格</option>
-                                            <option value="puter::RunDiffusion/Juggernaut-pro-flux">Juggernaut Pro — 写实人像</option>
                                             <option value="puter::Qwen/Qwen-Image">Qwen Image — 阿里通义</option>
-                                            <option value="puter::HiDream-ai/HiDream-I1-Full">HiDream I1 — 全参数</option>
                                             <option value="puter::ByteDance-Seed/Seedream-4.0">Seedream 4.0 — 字节最新</option>
+                                            <option value="puter::HiDream-ai/HiDream-I1-Full">HiDream I1 Full — 全参数</option>
                                         </optgroup>
                                     </select>
                                 </div>
@@ -421,7 +432,7 @@
                                 🎨 生成图片
                             </button>
                             <div class="image-gen-hint">
-                                Pollinations Turbo 免费 · Puter.js 提供 14 款免费模型 · 无需 API Key
+                                Puter.js 提供 20+ 免费模型 · 无需 API Key · 如失败请换模型重试
                             </div>
                         </div>
                     </div>

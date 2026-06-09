@@ -7852,7 +7852,6 @@ ${keywordsList}
                 name: 'Pollinations',
                 icon: '📡',
                 base: 'pollinations',
-                // Pollinations: GET https://image.pollinations.ai/prompt/{prompt}?width=&height=&seed=&model=
                 async generate(prompt, modelId, width, height, seed) {
                     const params = new URLSearchParams({
                         width: String(width),
@@ -7864,28 +7863,37 @@ ${keywordsList}
                     console.log('[ImageGen:Pollinations] 请求:', url);
 
                     let resp;
-                    for (let attempt = 0; attempt < 3; attempt++) {
+                    let lastNetErr;
+                    for (let attempt = 0; attempt < 2; attempt++) {
                         try {
                             resp = await fetch(url);
-                            if (resp.status === 402 && attempt < 2) {
-                                const waitSec = (attempt + 1) * 4;
-                                console.log(`[ImageGen:Pollinations] 402 限流，${waitSec}秒后重试...`);
-                                await new Promise(r => setTimeout(r, waitSec * 1000));
-                                continue;
-                            }
-                            break;
                         } catch (fetchErr) {
-                            if (attempt < 2) {
+                            lastNetErr = fetchErr;
+                            if (attempt < 1) {
                                 await new Promise(r => setTimeout(r, 3000));
                                 continue;
                             }
-                            throw fetchErr;
+                            // 网络错误 — 区分于模型错误
+                            throw new Error(`[网络] Pollinations 无法连接: ${fetchErr.message}`);
+                        }
+                        if (resp.ok) break;
+                        if (attempt < 1) {
+                            await new Promise(r => setTimeout(r, 4000));
+                            continue;
                         }
                     }
-                    if (resp.status === 402) throw new Error('Pollinations 免费额度繁忙，请稍后重试');
-                    if (!resp.ok) throw new Error(`Pollinations HTTP ${resp.status}`);
+                    if (!resp) {
+                        throw new Error(`[网络] Pollinations 连接失败: ${lastNetErr ? lastNetErr.message : '未知错误'}`);
+                    }
+                    if (resp.status === 402) {
+                        // 服务端限流，不是网络问题
+                        const text = await resp.text().catch(() => '');
+                        const isQueueFull = text.includes('Queue full') || text.includes('queued');
+                        throw new Error(`[限流] Pollinations 免费队列已满，请切换到 Puter.js 模型重试`);
+                    }
+                    if (!resp.ok) throw new Error(`[HTTP ${resp.status}] Pollinations 服务异常`);
                     const blob = await resp.blob();
-                    if (blob.size < 100) throw new Error('生成的图片无效');
+                    if (blob.size < 100) throw new Error('Pollinations 返回了空图片');
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.onload = () => resolve(reader.result);
@@ -7898,33 +7906,49 @@ ${keywordsList}
                 name: 'Puter.js',
                 icon: '☁️',
                 base: 'puter',
-                // Puter.js: puter.ai.txt2img(prompt, { model }) -> HTMLImageElement
                 async generate(prompt, modelId, width, height, _seed) {
                     if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
-                        throw new Error('Puter.js 未加载，请检查网络或刷新页面重试');
+                        throw new Error('[CDN] Puter.js 未加载，请检查网络或刷新页面重试');
                     }
                     console.log(`[ImageGen:Puter] 模型: ${modelId}, 尺寸: ${width}×${height}`);
-                    const img = await puter.ai.txt2img(prompt, {
-                        model: modelId
-                    });
-                    if (!img || !img.src) {
-                        throw new Error('Puter.js 返回结果为空');
+                    try {
+                        const img = await puter.ai.txt2img(prompt, {
+                            model: modelId
+                        });
+                        if (!img || !img.src) {
+                            throw new Error('Puter.js 返回结果为空');
+                        }
+                        if (img.src.startsWith('data:')) {
+                            console.log('[ImageGen:Puter] 生成成功, 尺寸:', img.naturalWidth, '×', img.naturalHeight);
+                            return img.src;
+                        }
+                        const resp = await fetch(img.src);
+                        if (!resp.ok) throw new Error(`Puter 图片下载失败 HTTP ${resp.status}`);
+                        const blob = await resp.blob();
+                        return new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = () => reject(new Error('图片数据读取失败'));
+                            reader.readAsDataURL(blob);
+                        });
+                    } catch (e) {
+                        const msg = e.message || String(e);
+                        // 区分错误类型
+                        if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('network')) {
+                            throw new Error(`[网络] Puter.js 请求失败，请检查网络后重试`);
+                        }
+                        if (msg.includes('timeout') || msg.includes('timed out')) {
+                            throw new Error(`[网络] Puter.js 请求超时，请换模型或稍后重试`);
+                        }
+                        if (msg.includes('not enough') || msg.includes('balance') || msg.includes('credit') || msg.includes('quota') || msg.includes('limit') || msg.includes('payment') || msg.includes('402')) {
+                            throw new Error(`[额度] ${modelId} 免费额度不足，请切换其他模型`);
+                        }
+                        if (msg.includes('rate') || msg.includes('too many')) {
+                            throw new Error(`[限流] ${modelId} 请求太频繁，请稍后重试`);
+                        }
+                        // 模型本身不可用或返回异常
+                        throw new Error(`[模型] ${modelId}: ${msg}`);
                     }
-                    // img.src is a data URL
-                    if (img.src.startsWith('data:')) {
-                        console.log('[ImageGen:Puter] 生成成功, 尺寸:', img.naturalWidth, '×', img.naturalHeight);
-                        return img.src;
-                    }
-                    // Sometimes returns URL instead of data URL
-                    const resp = await fetch(img.src);
-                    if (!resp.ok) throw new Error(`Puter 图片下载失败 HTTP ${resp.status}`);
-                    const blob = await resp.blob();
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result);
-                        reader.onerror = () => reject(new Error('图片数据读取失败'));
-                        reader.readAsDataURL(blob);
-                    });
                 }
             }
         };
@@ -8127,17 +8151,19 @@ ${keywordsList}
             } catch (e) {
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
                 let msg = e.message;
-                // 针对 Puter.js 常见错误给出友好提示
-                if (providerKey === 'puter') {
-                    if (msg.includes('未加载')) {
-                        msg = 'Puter.js 加载失败，请刷新页面或切换到 Pollinations Turbo 重试';
-                    } else if (msg.includes('credit') || msg.includes('quota') || msg.includes('limit')) {
-                        msg = `Puter.js 免费额度用尽，请切换到 Pollinations Turbo 或其他模型`;
-                    } else if (msg.includes('timeout') || msg.includes('timed out')) {
-                        msg = `Puter.js 请求超时，请重试或切换到 Pollinations Turbo`;
-                    }
+                // 统一前缀分类
+                if (msg.startsWith('[网络]')) {
+                    msg = '🌐 ' + msg.replace('[网络]', '网络不通: ') + ' — 请检查网络连接';
+                } else if (msg.startsWith('[限流]')) {
+                    msg = '⏳ ' + msg.replace('[限流]', '服务拥挤: ') + ' — 请切换到 Puter.js 模型';
+                } else if (msg.startsWith('[额度]')) {
+                    msg = '💰 ' + msg.replace('[额度]', '额度不足: ') + ' — 请换用其他免费模型';
+                } else if (msg.startsWith('[模型]')) {
+                    msg = '🤖 ' + msg.replace('[模型]', '模型异常: ') + ' — 请换一个模型重试';
+                } else if (msg.startsWith('[CDN]')) {
+                    msg = '📦 ' + msg.replace('[CDN]', '加载失败: ') + ' — 请刷新页面重试';
                 }
-                showToast(`生成失败: ${msg}`, 'error');
+                showToast(msg, 'error');
                 _isImageGenRunning = false;
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
