@@ -26,6 +26,7 @@
         let _currentAdminTab = 'users'; // 管理员面板当前标签页
         let _confirmCallback = null;  // 确认弹窗回调
         let _adminFilterText = '';    // 用户列表筛选文本
+        let _resetPwdUserId = null;   // 正在重置密码的用户ID
 
         // ==================== DOM 元素缓存（按需创建，自动复用） ====================
         const _domCache = new Map();
@@ -642,6 +643,7 @@
                         actionsHtml = `<button class="admin-btn-action" style="color:#60a5fa;border-color:rgba(96,165,250,0.3);" onclick="promoteToWhitelist('${u.user_id}','${escapeHtml(u.email || '')}')" title="添加白名单">加白</button>`;
                         actionsHtml += `<button class="admin-btn-action warn" onclick="blockUser('${u.user_id}')" title="拉黑">拉黑</button>`;
                     }
+                    actionsHtml += `<button class="admin-btn-action" style="color:#a78bfa;border-color:rgba(167,139,250,0.3);" onclick="openResetPasswordModal('${u.user_id}','${escapeHtml(u.email || '')}')" title="重置密码">密码</button>`;
                     actionsHtml += `<button class="admin-btn-action danger" onclick="deleteUser('${u.user_id}','${escapeHtml(u.email || '')}')" title="删除">删除</button>`;
                 }
 
@@ -752,6 +754,62 @@
                     showToast('删除失败，请确认已登录并拥有管理员权限', 'error');
                 }
             });
+        }
+
+        // 打开密码重置弹窗
+        function openResetPasswordModal(userId, email) {
+            _resetPwdUserId = userId;
+            document.getElementById('resetPwdTarget').textContent = email;
+            document.getElementById('resetPwdInput').value = '';
+            document.getElementById('resetPwdConfirm').value = '';
+            document.getElementById('resetPwdError').textContent = '';
+            document.getElementById('resetPwdOverlay').style.display = 'flex';
+            setTimeout(() => document.getElementById('resetPwdInput').focus(), 50);
+        }
+
+        // 关闭密码重置弹窗
+        function closeResetPwdModal() {
+            document.getElementById('resetPwdOverlay').style.display = 'none';
+            _resetPwdUserId = null;
+        }
+
+        // 确认重置密码
+        async function resetUserPassword() {
+            const userId = _resetPwdUserId;
+            if (!userId) return;
+            const newPwd = document.getElementById('resetPwdInput').value;
+            const confirmPwd = document.getElementById('resetPwdConfirm').value;
+            const errorEl = document.getElementById('resetPwdError');
+            errorEl.textContent = '';
+            if (!newPwd || newPwd.length < 6) { errorEl.textContent = '密码至少需要6位'; return; }
+            if (newPwd !== confirmPwd) { errorEl.textContent = '两次输入的密码不一致'; return; }
+            const btn = document.getElementById('resetPwdBtn');
+            btn.disabled = true;
+            btn.textContent = '重置中...';
+            try {
+                const result = await callManageUsers('reset_password', { user_id: userId, new_password: newPwd });
+                if (result) {
+                    showToast(result.message || '密码已重置', 'success');
+                    closeResetPwdModal();
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '确认重置';
+            }
+        }
+
+        // 发送密码重置邮件
+        async function sendPasswordResetEmail(userId, email) {
+            if (!userId) return;
+            const targetId = userId || _resetPwdUserId;
+            const targetEmail = email || document.getElementById('resetPwdTarget')?.textContent || '';
+            const confirmed = confirm(`确定向 ${targetEmail} 发送密码重置邮件？用户将收到一封包含重置链接的邮件。`);
+            if (!confirmed) return;
+            showToast('正在发送...', 'info');
+            const result = await callManageUsers('send_reset_email', { user_id: targetId });
+            if (result) {
+                showToast(result.message || '重置邮件已发送', 'success');
+            }
         }
 
         // 添加白名单用户（用户名+密码，邮箱可选后续绑定）

@@ -212,6 +212,56 @@ serve(async (req: Request) => {
         });
       }
 
+      case "reset_password": {
+        const { user_id, new_password } = payload;
+        if (!user_id) throw new Error("缺少 user_id");
+        if (!new_password || new_password.length < 6) throw new Error("新密码至少需要6位字符");
+
+        // 不允许修改管理员密码（需通过 Supabase Dashboard 操作）
+        const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(user_id);
+        if (!targetUser?.user) throw new Error("用户不存在");
+        if (targetUser.user.email === ADMIN_EMAIL) throw new Error("不能通过此方式修改管理员密码");
+
+        await supabaseAdmin.auth.admin.updateUserById(user_id, {
+          password: new_password,
+          email_confirm: true,
+        });
+
+        // 强制该用户登出，确保其使用新密码重新登录
+        await supabaseAdmin.auth.admin.signOut(user_id);
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: `密码已重置，用户 ${targetUser.user.email} 需要重新登录`,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "send_reset_email": {
+        const { user_id } = payload;
+        if (!user_id) throw new Error("缺少 user_id");
+
+        const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(user_id);
+        if (!targetUser?.user) throw new Error("用户不存在");
+        if (targetUser.user.email === ADMIN_EMAIL) throw new Error("不能对管理员账户操作");
+
+        // 发送密码重置邮件
+        const { error: resetErr } = await supabaseAdmin.auth.admin.generateLink({
+          type: "recovery",
+          email: targetUser.user.email!,
+        });
+
+        if (resetErr) throw new Error("发送重置邮件失败: " + resetErr.message);
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: `密码重置邮件已发送到 ${targetUser.user.email}`,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         throw new Error("未知操作: " + action);
     }
