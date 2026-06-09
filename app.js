@@ -7860,6 +7860,13 @@ ${keywordsList}
             localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
         }
 
+        // 手动修改宽高时取消比例按钮选中（手动输入优先）
+        function onImageGenSizeManualEdit() {
+            document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
+            const hint = document.getElementById('imageGenSizeHint');
+            hint.style.display = 'none';
+        }
+
         function selectImageGenRatio(btn) {
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');

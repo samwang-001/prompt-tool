@@ -386,12 +386,12 @@
                             <div class="image-gen-size-row" style="margin-top:0.5rem;">
                                 <div class="image-gen-size-input">
                                     <label>宽度</label>
-                                    <input type="number" id="imageGenWidth" value="1024" min="256" max="2048" step="64">
+                                    <input type="number" id="imageGenWidth" value="1024" min="256" max="2048" step="64" oninput="onImageGenSizeManualEdit()">
                                 </div>
                                 <span class="image-gen-size-sep">×</span>
                                 <div class="image-gen-size-input">
                                     <label>高度</label>
-                                    <input type="number" id="imageGenHeight" value="1024" min="256" max="2048" step="64">
+                                    <input type="number" id="imageGenHeight" value="1024" min="256" max="2048" step="64" oninput="onImageGenSizeManualEdit()">
                                 </div>
                             </div>
                             <div class="image-gen-size-hint" id="imageGenSizeHint" style="display:none;"></div>
