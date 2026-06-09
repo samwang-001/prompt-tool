@@ -7860,11 +7860,11 @@ ${keywordsList}
             localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
         }
 
-        // 手动修改宽高时取消比例按钮选中（手动输入优先）
-        function onImageGenSizeManualEdit() {
-            document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
-            const hint = document.getElementById('imageGenSizeHint');
-            hint.style.display = 'none';
+        // 更新尺寸标签和隐藏字段
+        function setImageGenSize(w, h) {
+            document.getElementById('imageGenWidth').value = w;
+            document.getElementById('imageGenHeight').value = h;
+            document.getElementById('imageGenSizeLabel').textContent = `${w}×${h}`;
         }
 
         function selectImageGenRatio(btn) {
@@ -7872,8 +7872,7 @@ ${keywordsList}
             btn.classList.add('active');
             const w = parseInt(btn.dataset.w);
             const h = parseInt(btn.dataset.h);
-            document.getElementById('imageGenWidth').value = w;
-            document.getElementById('imageGenHeight').value = h;
+            setImageGenSize(w, h);
             const hint = document.getElementById('imageGenSizeHint');
             hint.style.display = 'none';
         }
@@ -7884,17 +7883,14 @@ ${keywordsList}
             const prompt = document.getElementById('imageGenPrompt').value.trim();
             if (!prompt) {
                 showToast('请先输入提示词再使用智能尺寸', 'warning');
-                // fallback to 1:1
-                document.getElementById('imageGenWidth').value = 1024;
-                document.getElementById('imageGenHeight').value = 1024;
+                setImageGenSize(1024, 1024);
                 const hint = document.getElementById('imageGenSizeHint');
                 hint.style.display = 'block';
                 hint.textContent = '⚠️ 未检测到尺寸信息，使用默认 1024×1024';
                 return;
             }
             const result = parseSmartSize(prompt);
-            document.getElementById('imageGenWidth').value = result.width;
-            document.getElementById('imageGenHeight').value = result.height;
+            setImageGenSize(result.width, result.height);
             const hint = document.getElementById('imageGenSizeHint');
             hint.style.display = 'block';
             hint.textContent = result.hint
@@ -7974,8 +7970,7 @@ ${keywordsList}
             const smartBtn = document.querySelector('#imageGenRatioRow .smart-btn.active');
             if (smartBtn) {
                 const result = parseSmartSize(prompt);
-                document.getElementById('imageGenWidth').value = result.width;
-                document.getElementById('imageGenHeight').value = result.height;
+                setImageGenSize(result.width, result.height);
                 const hint = document.getElementById('imageGenSizeHint');
                 hint.style.display = 'block';
                 hint.textContent = result.hint

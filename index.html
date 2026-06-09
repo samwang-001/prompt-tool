@@ -371,7 +371,7 @@
                         </div>
                         <div class="card-body">
                             <textarea id="imageGenPrompt" class="image-gen-textarea" placeholder="描述你想生成的图片，例如：&#10;A futuristic city skyline at sunset, neon lights reflecting on glass buildings, cyberpunk style, 8k resolution" rows="5"></textarea>
-                            <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.35rem;display:block;">尺寸比例</label>
+                            <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.35rem;display:block;">尺寸比例 <span id="imageGenSizeLabel" style="color:var(--text-primary);font-weight:500;">1024×1024</span></label>
                             <div class="image-gen-ratio-row" id="imageGenRatioRow">
                                 <button class="ratio-btn active" data-ratio="1:1" data-w="1024" data-h="1024" onclick="selectImageGenRatio(this)">1:1 方形</button>
                                 <button class="ratio-btn" data-ratio="3:2" data-w="1200" data-h="800" onclick="selectImageGenRatio(this)">3:2</button>
@@ -383,18 +383,10 @@
                                 <button class="ratio-btn" data-ratio="9:16" data-w="720" data-h="1280" onclick="selectImageGenRatio(this)">9:16</button>
                                 <button class="ratio-btn smart-btn" data-ratio="auto" data-w="0" data-h="0" onclick="selectSmartSize(this)" title="从提示词中智能识别尺寸">✨ 智能</button>
                             </div>
-                            <div class="image-gen-size-row" style="margin-top:0.5rem;">
-                                <div class="image-gen-size-input">
-                                    <label>宽度</label>
-                                    <input type="number" id="imageGenWidth" value="1024" min="256" max="2048" step="64" oninput="onImageGenSizeManualEdit()">
-                                </div>
-                                <span class="image-gen-size-sep">×</span>
-                                <div class="image-gen-size-input">
-                                    <label>高度</label>
-                                    <input type="number" id="imageGenHeight" value="1024" min="256" max="2048" step="64" oninput="onImageGenSizeManualEdit()">
-                                </div>
-                            </div>
                             <div class="image-gen-size-hint" id="imageGenSizeHint" style="display:none;"></div>
+                            <!-- 隐藏字段，doImageGen 读取 -->
+                            <input type="hidden" id="imageGenWidth" value="1024">
+                            <input type="hidden" id="imageGenHeight" value="1024">
                             <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
                                 <div style="flex:1;">
                                     <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.25rem;display:block;">模型</label>
