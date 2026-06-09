@@ -31,6 +31,7 @@
             <div class="nav-tabs" id="navTabs">
                 <button class="nav-tab active" data-view="compose" onclick="switchView('compose')">词汇组合</button>
                 <button class="nav-tab" data-view="image-prompt" onclick="switchView('image-prompt')">图片反推</button>
+                <button class="nav-tab" data-view="image-gen" onclick="switchView('image-gen')">图片生成</button>
             </div>
             <div class="header-actions">
                 <!-- 未登录时显示登录按钮 -->
@@ -358,6 +359,90 @@
                 <!-- 动态渲染，由 renderImagePromptView() 生成 -->
             </div>
         </div><!-- /viewImagePrompt -->
+
+        <!-- ==================== 视图：图片生成 ==================== -->
+        <div class="view-container" id="viewImageGen">
+            <div class="image-gen-layout">
+                <!-- 左侧：生成控制 -->
+                <div class="image-gen-left">
+                    <div class="panel-card">
+                        <div class="card-header">
+                            <span class="card-title">提示词</span>
+                        </div>
+                        <div class="card-body">
+                            <textarea id="imageGenPrompt" class="image-gen-textarea" placeholder="描述你想生成的图片，例如：&#10;A futuristic city skyline at sunset, neon lights reflecting on glass buildings, cyberpunk style, 8k resolution" rows="5"></textarea>
+                            <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.35rem;display:block;">尺寸比例</label>
+                            <div class="image-gen-ratio-row" id="imageGenRatioRow">
+                                <button class="ratio-btn active" data-ratio="1:1" data-w="1024" data-h="1024" onclick="selectImageGenRatio(this)">1:1 方形</button>
+                                <button class="ratio-btn" data-ratio="3:2" data-w="1200" data-h="800" onclick="selectImageGenRatio(this)">3:2</button>
+                                <button class="ratio-btn" data-ratio="4:3" data-w="1200" data-h="900" onclick="selectImageGenRatio(this)">4:3</button>
+                                <button class="ratio-btn" data-ratio="16:9" data-w="1280" data-h="720" onclick="selectImageGenRatio(this)">16:9</button>
+                                <button class="ratio-btn" data-ratio="21:9" data-w="1680" data-h="720" onclick="selectImageGenRatio(this)">21:9</button>
+                                <button class="ratio-btn" data-ratio="3:4" data-w="900" data-h="1200" onclick="selectImageGenRatio(this)">3:4</button>
+                                <button class="ratio-btn" data-ratio="2:3" data-w="800" data-h="1200" onclick="selectImageGenRatio(this)">2:3</button>
+                                <button class="ratio-btn" data-ratio="9:16" data-w="720" data-h="1280" onclick="selectImageGenRatio(this)">9:16</button>
+                                <button class="ratio-btn smart-btn" data-ratio="auto" data-w="0" data-h="0" onclick="selectSmartSize(this)" title="从提示词中智能识别尺寸">✨ 智能</button>
+                            </div>
+                            <div class="image-gen-size-row" style="margin-top:0.5rem;">
+                                <div class="image-gen-size-input">
+                                    <label>宽度</label>
+                                    <input type="number" id="imageGenWidth" value="1024" min="256" max="2048" step="64">
+                                </div>
+                                <span class="image-gen-size-sep">×</span>
+                                <div class="image-gen-size-input">
+                                    <label>高度</label>
+                                    <input type="number" id="imageGenHeight" value="1024" min="256" max="2048" step="64">
+                                </div>
+                            </div>
+                            <div class="image-gen-size-hint" id="imageGenSizeHint" style="display:none;"></div>
+                            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+                                <div style="flex:1;">
+                                    <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.25rem;display:block;">模型</label>
+                                    <select id="imageGenModel" class="mini-select">
+                                        <option value="flux">Flux (高质量)</option>
+                                        <option value="turbo">Turbo (快速)</option>
+                                    </select>
+                                </div>
+                                <div style="flex:1;">
+                                    <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.25rem;display:block;">随机种子</label>
+                                    <input type="number" id="imageGenSeed" class="mini-input" placeholder="留空随机">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-full" id="imageGenBtn" onclick="doImageGen()">
+                                🎨 生成图片
+                            </button>
+                            <div class="image-gen-hint">
+                                使用 <a href="https://pollinations.ai" target="_blank">Pollinations.ai</a> 免费 API，无需 Key
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 右侧：生成结果 -->
+                <div class="image-gen-right">
+                    <div class="panel-card image-gen-result-card">
+                        <div class="card-header">
+                            <span class="card-title">生成结果</span>
+                            <div style="display:flex;gap:0.4rem;">
+                                <span class="badge" id="imageGenCount" style="display:none;">0</span>
+                                <button class="btn btn-ghost btn-sm" onclick="clearImageGenHistory()">清空</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="image-gen-result-area" id="imageGenResultArea">
+                                <div class="image-gen-empty">
+                                    <div class="image-gen-empty-icon">🖼️</div>
+                                    <p>输入提示词，点击生成按钮</p>
+                                </div>
+                            </div>
+                            <div class="image-gen-loading" id="imageGenLoading" style="display:none;">
+                                <div class="spinner"></div>
+                                <p>正在生成图片，请稍候...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /viewImageGen -->
     </main>
 
     <!-- Formula Modal -->

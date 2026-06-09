@@ -6562,7 +6562,12 @@ ${sampleStr}
             
             // 切换视图容器
             document.querySelectorAll('.view-container').forEach(c => c.classList.remove('active'));
-            const targetView = viewName === 'compose' ? 'viewCompose' : 'viewImagePrompt';
+            const viewMap = {
+                'compose': 'viewCompose',
+                'image-prompt': 'viewImagePrompt',
+                'image-gen': 'viewImageGen'
+            };
+            const targetView = viewMap[viewName] || 'viewCompose';
             document.getElementById(targetView).classList.add('active');
             
             // 切换到图片反推视图时，渲染布局
@@ -6572,6 +6577,10 @@ ${sampleStr}
             // 切换回词汇组合视图时，刷新渲染确保数据最新
             if (viewName === 'compose') {
                 refreshComposeView();
+            }
+            // 切换到图片生成视图时，渲染已有的历史记录
+            if (viewName === 'image-gen') {
+                renderImageGenResults();
             }
         }
 
@@ -7832,6 +7841,288 @@ ${keywordsList}
             renderImageHistory();
         }
 
+        // ==================== 图片生成功能 ====================
+        const IMAGE_GEN_HISTORY_KEY = 'prompt_tool_image_gen_history';
+        let imageGenHistory = [];
+        let _isImageGenRunning = false;
+
+        function loadImageGenHistory() {
+            try {
+                const raw = localStorage.getItem(IMAGE_GEN_HISTORY_KEY);
+                imageGenHistory = raw ? JSON.parse(raw) : [];
+            } catch { imageGenHistory = []; }
+        }
+
+        function saveImageGenToHistory(item) {
+            loadImageGenHistory();
+            imageGenHistory.unshift(item);
+            if (imageGenHistory.length > 50) imageGenHistory.length = 50;
+            localStorage.setItem(IMAGE_GEN_HISTORY_KEY, JSON.stringify(imageGenHistory));
+        }
+
+        function selectImageGenRatio(btn) {
+            document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const w = parseInt(btn.dataset.w);
+            const h = parseInt(btn.dataset.h);
+            document.getElementById('imageGenWidth').value = w;
+            document.getElementById('imageGenHeight').value = h;
+            const hint = document.getElementById('imageGenSizeHint');
+            hint.style.display = 'none';
+        }
+
+        function selectSmartSize(btn) {
+            document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const prompt = document.getElementById('imageGenPrompt').value.trim();
+            if (!prompt) {
+                showToast('请先输入提示词再使用智能尺寸', 'warning');
+                // fallback to 1:1
+                document.getElementById('imageGenWidth').value = 1024;
+                document.getElementById('imageGenHeight').value = 1024;
+                const hint = document.getElementById('imageGenSizeHint');
+                hint.style.display = 'block';
+                hint.textContent = '⚠️ 未检测到尺寸信息，使用默认 1024×1024';
+                return;
+            }
+            const result = parseSmartSize(prompt);
+            document.getElementById('imageGenWidth').value = result.width;
+            document.getElementById('imageGenHeight').value = result.height;
+            const hint = document.getElementById('imageGenSizeHint');
+            hint.style.display = 'block';
+            hint.textContent = result.hint
+                ? `💡 识别到: ${result.hint} → ${result.width}×${result.height}`
+                : `使用默认 ${result.width}×${result.height}`;
+        }
+
+        function parseSmartSize(text) {
+            const t = text.toLowerCase();
+            let w, h, hint = '';
+
+            // 1. 精确尺寸: 1024x768, 1024*768, 1024×768, 1920x1080
+            const exactMatch = t.match(/(\d{2,4})\s*[x×\*]\s*(\d{2,4})/);
+            if (exactMatch) {
+                w = parseInt(exactMatch[1]);
+                h = parseInt(exactMatch[2]);
+                hint = `${w}×${h}`;
+                // Clamp to valid range
+                w = Math.max(256, Math.min(2048, w));
+                h = Math.max(256, Math.min(2048, h));
+                return { width: w, height: h, hint };
+            }
+
+            // 2. 分辨率关键词
+            if (/\b4k\b|ultra\s*hd|uhd\b/.test(t)) { w = 2048; h = 1152; hint = '4K (2048×1152)'; }
+            else if (/\b2k\b|qhd\b/.test(t)) { w = 2048; h = 1152; hint = '2K (2048×1152)'; }
+            else if (/\b1080p\b|full\s*hd\b|fhd\b/.test(t)) { w = 1920; h = 1080; hint = '1080p (1920×1080)'; }
+            else if (/\b720p\b|\bhd\b/.test(t)) { w = 1280; h = 720; hint = '720p (1280×720)'; }
+
+            // 3. 比例关键词
+            else if (/\b21:9\b|ultrawide|超宽/.test(t)) { w = 1680; h = 720; hint = '21:9 超宽屏'; }
+            else if (/\b16:9\b|widescreen|宽屏|横屏|landscape\b|banner|横版|banner/.test(t)) { w = 1280; h = 720; hint = '16:9 宽屏'; }
+            else if (/\b3:2\b/.test(t)) { w = 1200; h = 800; hint = '3:2'; }
+            else if (/\b4:3\b/.test(t)) { w = 1200; h = 900; hint = '4:3'; }
+            else if (/\b1:1\b|square|正方形|方形/.test(t)) { w = 1024; h = 1024; hint = '1:1 方形'; }
+            else if (/\b4:5\b/.test(t)) { w = 1024; h = 1280; hint = '4:5 (1024×1280)'; }
+            else if (/\b3:4\b/.test(t)) { w = 900; h = 1200; hint = '3:4'; }
+            else if (/\b2:3\b/.test(t)) { w = 800; h = 1200; hint = '2:3'; }
+            else if (/\b9:16\b|portrait|竖向|竖屏|故事|story|竖版/.test(t)) { w = 720; h = 1280; hint = '9:16 竖屏'; }
+
+            // 4. 中文语义
+            else if (/海报|poster/.test(t)) { w = 800; h = 1200; hint = '海报 (2:3)'; }
+            else if (/手机壁纸|壁纸|wallpaper/.test(t)) { w = 720; h = 1280; hint = '手机壁纸 (9:16)'; }
+            else if (/头像|avatar|pfp/.test(t)) { w = 1024; h = 1024; hint = '头像 (1:1)'; }
+            else if (/封面|cover/.test(t) && !/手机/.test(t)) { w = 1280; h = 720; hint = '封面 (16:9)'; }
+            else if (/a4/.test(t)) { w = 1200; h = 1697; hint = 'A4 比例'; }
+            else if (/卡片|card/.test(t)) { w = 1200; h = 900; hint = '卡片 (4:3)'; }
+
+            // 5. 默认 1:1
+            if (!w || !h) {
+                w = 1024;
+                h = 1024;
+                hint = '';
+            }
+
+            // Clamp
+            w = Math.max(256, Math.min(2048, w));
+            h = Math.max(256, Math.min(2048, h));
+
+            return { width: w, height: h, hint };
+        }
+
+        async function doImageGen() {
+            if (_isImageGenRunning) return;
+            const prompt = document.getElementById('imageGenPrompt').value.trim();
+            if (!prompt) { showToast('请输入提示词', 'warning'); return; }
+
+            _isImageGenRunning = true;
+            const btn = document.getElementById('imageGenBtn');
+            const loading = document.getElementById('imageGenLoading');
+            const resultArea = document.getElementById('imageGenResultArea');
+            btn.disabled = true;
+            btn.textContent = '⏳ 生成中...';
+            loading.style.display = 'flex';
+
+            // 如果智能模式激活，先解析尺寸
+            const smartBtn = document.querySelector('#imageGenRatioRow .smart-btn.active');
+            if (smartBtn) {
+                const result = parseSmartSize(prompt);
+                document.getElementById('imageGenWidth').value = result.width;
+                document.getElementById('imageGenHeight').value = result.height;
+                const hint = document.getElementById('imageGenSizeHint');
+                hint.style.display = 'block';
+                hint.textContent = result.hint
+                    ? `💡 识别到: ${result.hint} → ${result.width}×${result.height}`
+                    : `使用默认 ${result.width}×${result.height}`;
+            }
+
+            const width = parseInt(document.getElementById('imageGenWidth').value) || 1024;
+            const height = parseInt(document.getElementById('imageGenHeight').value) || 1024;
+            const model = document.getElementById('imageGenModel').value;
+            const seedInput = document.getElementById('imageGenSeed').value.trim();
+            const seed = seedInput ? parseInt(seedInput) : Math.floor(Math.random() * 2147483647);
+
+            const params = new URLSearchParams({
+                width: String(width),
+                height: String(height),
+                seed: String(seed),
+                model: model,
+                nologo: 'true'
+            });
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
+            console.log('[ImageGen] 请求:', url);
+
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const blob = await resp.blob();
+                if (blob.size < 100) throw new Error('生成的图片无效');
+
+                const reader = new FileReader();
+                reader.onload = function() {
+                    const base64 = reader.result;
+                    const item = {
+                        id: Date.now(),
+                        prompt,
+                        width,
+                        height,
+                        model,
+                        seed,
+                        base64,
+                        time: new Date().toISOString()
+                    };
+                    saveImageGenToHistory(item);
+                    renderImageGenResults();
+                    _isImageGenRunning = false;
+                    btn.disabled = false;
+                    btn.textContent = '🎨 生成图片';
+                    loading.style.display = 'none';
+                    showToast('图片生成成功 ✓', 'success');
+                };
+                reader.readAsDataURL(blob);
+            } catch (e) {
+                console.error('[ImageGen] 生成失败:', e);
+                showToast('生成失败: ' + e.message, 'error');
+                _isImageGenRunning = false;
+                btn.disabled = false;
+                btn.textContent = '🎨 生成图片';
+                loading.style.display = 'none';
+            }
+        }
+
+        function renderImageGenResults() {
+            loadImageGenHistory();
+            const container = document.getElementById('imageGenResultArea');
+            const countEl = document.getElementById('imageGenCount');
+            if (!container) return;
+
+            if (countEl) {
+                countEl.style.display = imageGenHistory.length > 0 ? 'inline-flex' : 'none';
+                countEl.textContent = String(imageGenHistory.length);
+            }
+
+            if (imageGenHistory.length === 0) {
+                container.innerHTML = `
+                    <div class="image-gen-empty">
+                        <div class="image-gen-empty-icon">🖼️</div>
+                        <p>输入提示词，点击生成按钮</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="image-gen-grid">
+                    ${imageGenHistory.map((item, idx) => `
+                        <div class="image-gen-item">
+                            <div class="image-gen-item-img">
+                                <img src="${item.base64}" alt="${escapeHtml(item.prompt)}" loading="lazy"
+                                     onclick="previewImageGenItem(${idx})">
+                            </div>
+                            <div class="image-gen-item-info">
+                                <div class="image-gen-item-prompt" title="${escapeHtml(item.prompt)}">${escapeHtml(item.prompt.substring(0, 60))}${item.prompt.length > 60 ? '...' : ''}</div>
+                                <div class="image-gen-item-meta">
+                                    <span>${item.width}×${item.height}</span>
+                                    <span>${item.model || 'flux'}</span>
+                                    <span>seed:${item.seed}</span>
+                                </div>
+                                <div class="image-gen-item-actions">
+                                    <button class="btn btn-ghost btn-sm" onclick="downloadImageGenItem(${idx})" title="下载">下载</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="copyImageGenPrompt(${idx})" title="复制提示词">复制</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
+
+        function previewImageGenItem(idx) {
+            loadImageGenHistory();
+            if (idx < 0 || idx >= imageGenHistory.length) return;
+            const item = imageGenHistory[idx];
+            const overlay = document.createElement('div');
+            overlay.className = 'image-gen-preview-overlay';
+            overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+            overlay.innerHTML = `
+                <div class="image-gen-preview-box">
+                    <span class="image-gen-preview-close" onclick="this.closest('.image-gen-preview-overlay').remove()">✕</span>
+                    <img src="${item.base64}" alt="${escapeHtml(item.prompt)}">
+                    <div class="image-gen-preview-info">
+                        <p>${escapeHtml(item.prompt)}</p>
+                        <small>${item.width}×${item.height} · ${item.model || 'flux'} · seed:${item.seed}</small>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+        }
+
+        function downloadImageGenItem(idx) {
+            loadImageGenHistory();
+            if (idx < 0 || idx >= imageGenHistory.length) return;
+            const item = imageGenHistory[idx];
+            const a = document.createElement('a');
+            a.href = item.base64;
+            a.download = `image-gen-${item.id}.png`;
+            a.click();
+        }
+
+        function copyImageGenPrompt(idx) {
+            loadImageGenHistory();
+            if (idx < 0 || idx >= imageGenHistory.length) return;
+            const item = imageGenHistory[idx];
+            navigator.clipboard.writeText(item.prompt).then(() => {
+                showToast('提示词已复制 ✓', 'success');
+            }).catch(() => {
+                showToast('复制失败', 'error');
+            });
+        }
+
+        function clearImageGenHistory() {
+            if (!confirm('确定要清空所有生成记录吗？')) return;
+            imageGenHistory = [];
+            localStorage.removeItem(IMAGE_GEN_HISTORY_KEY);
+            renderImageGenResults();
+            showToast('已清空生成记录', 'success');
+        }
+
         // ==================== 图片反推提示词功能 ====================
         let imagePromptState = {
             imageFile: null,
@@ -8117,7 +8408,7 @@ ${keywordsList}
                     'qwen-vl-max': '商业版·最强视觉·精度最高，✅ 支持本地上传base64'
                 },
                 'groq': {
-                    'meta-llama/llama-4-scout-17b-16e-instruct': '完全免费·多模态视觉·OCR·128K上下文，✅ 支持本地上传base64（⚠️ Maverick不支持视觉，只有Scout可反推图片）'
+                    'meta-llama/llama-4-scout-17b-16e-instruct': '完全免费·多模态视觉·OCR·128K上下文，✅ 支持本地上传base64'
                 }
             };
             
