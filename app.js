@@ -6539,6 +6539,10 @@ ${sampleStr}
             renderOptStatusBar();
             updateFormulaSelect(); // 初始化公式选择器
 
+            // 预加载图片生成历史到 IndexedDB，确保切换视图时立即可用
+            try { await loadImageGenHistory(); } catch (e) { console.warn('[Init] 图片生成历史预加载失败:', e); }
+            if (currentView === 'image-gen') renderImageGenResults();
+
             // 保存数据版本号
             localStorage.setItem('data-version', DATA_VERSION);
 
