@@ -7847,6 +7847,13 @@ ${keywordsList}
         let _isImageGenRunning = false;
 
         // Provider & Model 定义
+        // 辅助：宽高 → 最简比例
+        function computeRatio(w, h) {
+            const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+            const d = gcd(w, h);
+            return { w: Math.round(w / d), h: Math.round(h / d) };
+        }
+
         const IMAGE_GEN_PROVIDERS = {
             pollinations: {
                 name: 'Pollinations',
@@ -7906,15 +7913,17 @@ ${keywordsList}
                 name: 'Puter.js',
                 icon: '☁️',
                 base: 'puter',
-                async generate(prompt, modelId, width, height, _seed) {
+                async generate(prompt, modelId, width, height, seed) {
                     if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
                         throw new Error('[CDN] Puter.js 未加载，请检查网络或刷新页面重试');
                     }
-                    console.log(`[ImageGen:Puter] 模型: ${modelId}, 尺寸: ${width}×${height}`);
+                    const ratio = computeRatio(width, height);
+                    console.log(`[ImageGen:Puter] 模型: ${modelId}, 尺寸: ${width}×${height}, 比例: ${ratio.w}:${ratio.h}, seed: ${seed}`);
+                    const options = { model: modelId, ratio };
+                    // seed 被大多数 Replicate 模型支持
+                    if (seed != null) options.seed = seed;
                     try {
-                        const img = await puter.ai.txt2img(prompt, {
-                            model: modelId
-                        });
+                        const img = await puter.ai.txt2img(prompt, options);
                         if (!img || !img.src) {
                             throw new Error('Puter.js 返回结果为空');
                         }
