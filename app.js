@@ -8191,7 +8191,7 @@ ${keywordsList}
 
             // 3. 比例关键词
             else if (/\b21:9\b|ultrawide|超宽/.test(t)) { w = 1680; h = 720; hint = '21:9 超宽屏'; }
-            else if (/\b16:9\b|widescreen|宽屏|横屏|landscape\b|banner|横版|banner/.test(t)) { w = 1280; h = 720; hint = '16:9 宽屏'; }
+            else if (/\b16:9\b|widescreen|宽屏|横屏|landscape|banner|横版/.test(t)) { w = 1280; h = 720; hint = '16:9 宽屏'; }
             else if (/\b3:2\b/.test(t)) { w = 1200; h = 800; hint = '3:2'; }
             else if (/\b4:3\b/.test(t)) { w = 1200; h = 900; hint = '4:3'; }
             else if (/\b1:1\b|square|正方形|方形/.test(t)) { w = 1024; h = 1024; hint = '1:1 方形'; }
@@ -8238,12 +8238,13 @@ ${keywordsList}
             const smartBtn = document.querySelector('#imageGenRatioRow .smart-btn.active');
             if (smartBtn) {
                 const result = parseSmartSize(prompt);
+                console.log('[ImageGen] 智能尺寸解析:', JSON.stringify(result), '提示词:', prompt);
                 setImageGenSize(result.width, result.height);
                 const hint = document.getElementById('imageGenSizeHint');
                 hint.style.display = 'block';
                 hint.textContent = result.hint
                     ? `💡 识别到: ${result.hint} → ${result.width}×${result.height}`
-                    : `使用默认 ${result.width}×${result.height}`;
+                    : `⚠️ 未识别比例，使用默认 ${result.width}×${result.height}`;
             }
 
             const width = parseInt(document.getElementById('imageGenWidth').value) || 1024;
