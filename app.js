@@ -7996,6 +7996,18 @@ ${keywordsList}
                     if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
                         throw new Error('[CDN] Puter.js 未加载，请检查网络或刷新页面重试');
                     }
+                    // 检查登录状态，未登录则弹窗登录（避免整页跳转到虚拟桌面）
+                    if (puter.auth && typeof puter.auth.isSignedIn === 'function') {
+                        if (!puter.auth.isSignedIn()) {
+                            console.log('[ImageGen:Puter] 未登录，弹窗授权...');
+                            try {
+                                await puter.auth.signIn();
+                                console.log('[ImageGen:Puter] 登录成功');
+                            } catch (authErr) {
+                                throw new Error('[认证] Puter 登录失败或已取消，请重试');
+                            }
+                        }
+                    }
                     const ratio = computeRatio(width, height);
                     const _handleError = (err, mid) => {
                         const msg = err.message || String(err);
@@ -8461,7 +8473,9 @@ ${keywordsList}
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
                 let msg = e.message;
                 // 统一前缀分类
-                if (msg.startsWith('[网络]')) {
+                if (msg.startsWith('[认证]')) {
+                    msg = '🔑 ' + msg.replace('[认证]', '需要登录: ') + ' — Puter 提供免费 AI，登录后即可使用';
+                } else if (msg.startsWith('[网络]')) {
                     msg = '🌐 ' + msg.replace('[网络]', '网络不通: ') + ' — 请检查网络连接';
                 } else if (msg.startsWith('[限流]')) {
                     msg = '⏳ ' + msg.replace('[限流]', '服务拥挤: ') + ' — 请切换到 Puter.js 模型';
