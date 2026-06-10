@@ -6652,6 +6652,14 @@ ${sampleStr}
             // 切换到图片生成视图时，渲染已有的历史记录
             if (viewName === 'image-gen') {
                 renderImageGenResults();
+                // 初始化画质提示
+                onQualityChange();
+                // 绑定模型切换时更新画质提示
+                const modelSel = document.getElementById('imageGenModel');
+                if (modelSel && !modelSel._qualityBound) {
+                    modelSel._qualityBound = true;
+                    modelSel.addEventListener('change', onQualityChange);
+                }
             }
         }
 
@@ -7984,16 +7992,34 @@ ${keywordsList}
                 name: 'Puter.js',
                 icon: '☁️',
                 base: 'puter',
-                async generate(prompt, modelId, width, height, seed) {
+                async generate(prompt, modelId, width, height, seed, qualityOpts) {
                     if (typeof puter === 'undefined' || !puter.ai || !puter.ai.txt2img) {
                         throw new Error('[CDN] Puter.js 未加载，请检查网络或刷新页面重试');
                     }
                     const ratio = computeRatio(width, height);
-                    console.log(`[ImageGen:Puter] 模型: ${modelId}, 尺寸: ${width}×${height}, 比例: ${ratio.w}:${ratio.h}, seed: ${seed}`);
-                    const options = { model: modelId, ratio };
-                    // seed 被大多数 Replicate 模型支持
-                    if (seed != null) options.seed = seed;
-                    try {
+                    const _handleError = (err, mid) => {
+                        const msg = err.message || String(err);
+                        if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('network')) {
+                            return new Error(`[网络] Puter.js 请求失败，请检查网络后重试`);
+                        }
+                        if (msg.includes('timeout') || msg.includes('timed out')) {
+                            return new Error(`[网络] Puter.js 请求超时，请换模型或稍后重试`);
+                        }
+                        if (msg.includes('not enough') || msg.includes('balance') || msg.includes('credit') || msg.includes('quota') || msg.includes('limit') || msg.includes('payment') || msg.includes('402')) {
+                            return new Error(`[额度] ${mid} 免费额度不足，请切换其他模型`);
+                        }
+                        if (msg.includes('rate') || msg.includes('too many')) {
+                            return new Error(`[限流] ${mid} 请求太频繁，请稍后重试`);
+                        }
+                        return new Error(`[模型] ${mid}: ${msg}`);
+                    };
+                    const _doGenerate = async (extraOpts) => {
+                        const options = { model: modelId, ratio };
+                        if (seed != null) options.seed = seed;
+                        if (extraOpts && Object.keys(extraOpts).length > 0) {
+                            Object.assign(options, extraOpts);
+                        }
+                        console.log(`[ImageGen:Puter] 模型: ${modelId}, 尺寸: ${width}×${height}, 比例: ${ratio.w}:${ratio.h}, seed: ${seed}, 选项:`, extraOpts || '无');
                         const img = await puter.ai.txt2img(prompt, options);
                         if (!img || !img.src) {
                             throw new Error('Puter.js 返回结果为空');
@@ -8011,23 +8037,22 @@ ${keywordsList}
                             reader.onerror = () => reject(new Error('图片数据读取失败'));
                             reader.readAsDataURL(blob);
                         });
+                    };
+
+                    try {
+                        return await _doGenerate(qualityOpts);
                     } catch (e) {
                         const msg = e.message || String(e);
-                        // 区分错误类型
-                        if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('network')) {
-                            throw new Error(`[网络] Puter.js 请求失败，请检查网络后重试`);
+                        console.warn(`[ImageGen:Puter] 带画质参数失败: ${msg}，尝试无画质参数重试...`);
+                        if (qualityOpts && Object.keys(qualityOpts).length > 0) {
+                            try {
+                                console.log('[ImageGen:Puter] 重试：不带画质参数');
+                                return await _doGenerate({});
+                            } catch (retryErr) {
+                                throw _handleError(retryErr, modelId);
+                            }
                         }
-                        if (msg.includes('timeout') || msg.includes('timed out')) {
-                            throw new Error(`[网络] Puter.js 请求超时，请换模型或稍后重试`);
-                        }
-                        if (msg.includes('not enough') || msg.includes('balance') || msg.includes('credit') || msg.includes('quota') || msg.includes('limit') || msg.includes('payment') || msg.includes('402')) {
-                            throw new Error(`[额度] ${modelId} 免费额度不足，请切换其他模型`);
-                        }
-                        if (msg.includes('rate') || msg.includes('too many')) {
-                            throw new Error(`[限流] ${modelId} 请求太频繁，请稍后重试`);
-                        }
-                        // 模型本身不可用或返回异常
-                        throw new Error(`[模型] ${modelId}: ${msg}`);
+                        throw _handleError(e, modelId);
                     }
                 }
             }
@@ -8136,6 +8161,86 @@ ${keywordsList}
             document.getElementById('imageGenSizeLabel').textContent = `${w}×${h}`;
         }
 
+        // ==================== 画质参数映射 ====================
+        // 注意：Puter.js 作为中间层，仅支持 quality 参数。
+        // output_quality / steps / prompt_upsampling 是 Replicate 原生参数，
+        // 通过 Puter.js 传递会引发错误，因此移除了这些参数。
+        function getQualityParams(modelId, qualityLevel) {
+            const opts = {};
+            const id = (modelId || '').toLowerCase();
+
+            // === OpenAI 模型 (Puter.js 原生支持 quality 参数) ===
+            if (id.startsWith('gpt-image-2')) {
+                opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'auto';
+            } else if (id.startsWith('gpt-image-') || id.startsWith('gpt-image')) {
+                opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'high';
+            } else if (id === 'dall-e-3' || id === 'dall-e-2') {
+                opts.quality = qualityLevel === 'high' ? 'hd' : 'standard';
+            }
+
+            // === Gemini / Imagen 模型: 通过 Puter.js 传递 quality ===
+            if (id.startsWith('gemini-') || id.includes('imagen') || id.includes('flash-image')) {
+                opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'high';
+            }
+
+            // === 其他模型 (Flux / SD / Ideogram / Seedream 等 Replicate 模型) ===
+            // 通过 Puter.js 调用时，只传 quality 参数，让 Puter.js 内部映射
+            if (id.includes('flux') || id.includes('stable-diffusion') || id.includes('sd-') ||
+                id.includes('sd3') || id.includes('sdxl') ||
+                id.includes('ideogram') || id.includes('dreamshaper') ||
+                id.includes('qwen') || id.includes('seedream') || id.includes('hidream') ||
+                id.includes('juggernaut') || id.includes('krea') || id.includes('kontext') || id.includes('canny')) {
+                opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'high';
+            }
+
+            return Object.keys(opts).length > 0 ? opts : null;
+        }
+
+        // 获取模型支持的最大分辨率（用于智能尺寸解析）
+        function getModelMaxResolution(modelId) {
+            const id = (modelId || '').toLowerCase();
+            if (id.startsWith('gemini-') || id.includes('imagen')) return 4096;
+            if (id.includes('flux-2')) return 4096;
+            if (id.includes('flux-1.1-pro')) return 2048;
+            if (id.includes('flux-schnell')) return 1440;
+            if (id.includes('seedream')) return 2048;
+            if (id.includes('hidream')) return 2048;
+            if (id.startsWith('gpt-image-2')) return 2048;
+            return 2048; // 默认上限
+        }
+
+        // 画质切换时更新提示
+        function onQualityChange() {
+            const q = document.getElementById('imageGenQuality')?.value || 'standard';
+            const hint = document.getElementById('imageGenQualityHint');
+            const rawModel = document.getElementById('imageGenModel')?.value || '';
+            const { modelId } = parseModelValue(rawModel);
+            const id = (modelId || '').toLowerCase();
+
+            if (!hint) return;
+            const hints = {
+                fast: '生成快，适合草稿',
+                standard: '均衡推荐',
+                high: '最佳效果，耗时较长'
+            };
+
+            // 根据模型补充说明
+            let extra = '';
+            if (id.startsWith('gpt-image-2')) {
+                if (q === 'high') extra = ' · auto画质';
+                else if (q === 'standard') extra = ' · medium';
+                else extra = ' · low';
+            } else if (id.startsWith('gpt-image-') || id === 'dall-e-3' || id === 'dall-e-2') {
+                extra = q === 'high' ? ' · hd' : q === 'standard' ? ' · medium' : ' · low';
+            } else if (id.startsWith('gemini-') || id.includes('imagen') || id.includes('flash-image')) {
+                extra = q === 'high' ? ' · high' : q === 'standard' ? ' · medium' : ' · low';
+            } else {
+                extra = q === 'high' ? ' · 高质量' : q === 'standard' ? ' · 标准' : ' · 快速';
+            }
+
+            hint.textContent = hints[q] + extra;
+        }
+
         function selectImageGenRatio(btn) {
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -8158,7 +8263,10 @@ ${keywordsList}
                 hint.textContent = '⚠️ 未检测到尺寸信息，使用默认 1024×1024';
                 return;
             }
-            const result = parseSmartSize(prompt);
+            const rawModel = document.getElementById('imageGenModel')?.value || '';
+            const { modelId } = parseModelValue(rawModel);
+            const maxRes = getModelMaxResolution(modelId);
+            const result = parseSmartSize(prompt, maxRes);
             setImageGenSize(result.width, result.height);
             const hint = document.getElementById('imageGenSizeHint');
             hint.style.display = 'block';
@@ -8167,7 +8275,7 @@ ${keywordsList}
                 : `使用默认 ${result.width}×${result.height}`;
         }
 
-        function parseSmartSize(text) {
+        function parseSmartSize(text, maxRes = 2048) {
             const t = text.toLowerCase();
             let w, h, hint = '';
 
@@ -8177,8 +8285,8 @@ ${keywordsList}
                 w = parseInt(exactMatch[1]);
                 h = parseInt(exactMatch[2]);
                 hint = `${w}×${h}`;
-                w = Math.max(256, Math.min(2048, w));
-                h = Math.max(256, Math.min(2048, h));
+                w = Math.max(256, Math.min(maxRes, w));
+                h = Math.max(256, Math.min(maxRes, h));
                 return { width: w, height: h, hint };
             }
 
@@ -8214,10 +8322,16 @@ ${keywordsList}
                 }
             }
 
-            // 3. 分辨率关键词
+            // 3. 分辨率关键词 — 根据模型能力动态调整
             if (!w || !h) {
-                if (/\b4k\b|ultra\s*hd|uhd\b/.test(t)) { w = 2048; h = 1152; hint = '4K (2048×1152)'; }
-                else if (/\b2k\b|qhd\b/.test(t)) { w = 2048; h = 1152; hint = '2K (2048×1152)'; }
+                if (/\b4k\b|ultra\s*hd|uhd\b/.test(t)) {
+                    if (maxRes >= 4096) { w = 4096; h = 2304; hint = '4K (4096×2304)'; }
+                    else { w = 2048; h = 1152; hint = '4K (2048×1152)'; }
+                }
+                else if (/\b2k\b|qhd\b/.test(t)) {
+                    if (maxRes >= 2560) { w = 2560; h = 1440; hint = '2K (2560×1440)'; }
+                    else { w = 2048; h = 1152; hint = '2K (2048×1152)'; }
+                }
                 else if (/\b1080p\b|full\s*hd\b|fhd\b/.test(t)) { w = 1920; h = 1080; hint = '1080p (1920×1080)'; }
                 else if (/\b720p\b|\bhd\b/.test(t)) { w = 1280; h = 720; hint = '720p (1280×720)'; }
             }
@@ -8249,8 +8363,8 @@ ${keywordsList}
             }
 
             // Clamp
-            w = Math.max(256, Math.min(2048, w));
-            h = Math.max(256, Math.min(2048, h));
+            w = Math.max(256, Math.min(maxRes, w));
+            h = Math.max(256, Math.min(maxRes, h));
 
             return { width: w, height: h, hint };
         }
@@ -8270,8 +8384,11 @@ ${keywordsList}
             // 如果智能模式激活，先解析尺寸
             const smartBtn = document.querySelector('#imageGenRatioRow .smart-btn.active');
             if (smartBtn) {
-                const result = parseSmartSize(prompt);
-                console.log('[ImageGen] 智能尺寸解析:', JSON.stringify(result), '提示词:', prompt);
+                const rawModelPre = document.getElementById('imageGenModel')?.value || '';
+                const { modelId: midPre } = parseModelValue(rawModelPre);
+                const maxResPre = getModelMaxResolution(midPre);
+                const result = parseSmartSize(prompt, maxResPre);
+                console.log('[ImageGen] 智能尺寸解析:', JSON.stringify(result), '提示词:', prompt, '模型最大:', maxResPre);
                 setImageGenSize(result.width, result.height);
                 const hint = document.getElementById('imageGenSizeHint');
                 hint.style.display = 'block';
@@ -8280,29 +8397,43 @@ ${keywordsList}
                     : `⚠️ 未识别比例，使用默认 ${result.width}×${result.height}`;
             }
 
-            const width = parseInt(document.getElementById('imageGenWidth').value) || 1024;
-            const height = parseInt(document.getElementById('imageGenHeight').value) || 1024;
+            let width = parseInt(document.getElementById('imageGenWidth').value) || 1024;
+            let height = parseInt(document.getElementById('imageGenHeight').value) || 1024;
             const rawModel = document.getElementById('imageGenModel').value;
             const { provider: providerKey, modelId } = parseModelValue(rawModel);
+            // 根据模型能力限制最大分辨率
+            const maxRes = getModelMaxResolution(modelId);
+            width = Math.max(256, Math.min(maxRes, width));
+            height = Math.max(256, Math.min(maxRes, height));
+            // 同步回隐藏字段
+            document.getElementById('imageGenWidth').value = width;
+            document.getElementById('imageGenHeight').value = height;
+
             const seedInput = document.getElementById('imageGenSeed').value.trim();
             const seed = seedInput ? parseInt(seedInput) : Math.floor(Math.random() * 2147483647);
 
+            // 读取画质设置
+            const qualityEl = document.getElementById('imageGenQuality');
+            const qualityLevel = qualityEl ? qualityEl.value : 'standard';
+            const qualityOpts = getQualityParams(modelId, qualityLevel);
+
             const provider = IMAGE_GEN_PROVIDERS[providerKey];
             const providerName = provider ? provider.name : providerKey;
-            console.log(`[ImageGen] Provider: ${providerName}, Model: ${modelId}, Size: ${width}×${height}`);
+            console.log(`[ImageGen] Provider: ${providerName}, Model: ${modelId}, Size: ${width}×${height}, 画质: ${qualityLevel}`, qualityOpts || '默认');
 
             // 更新 loading 文字
             const loadingTitle = loading.querySelector('p');
             const loadingSub = loading.querySelector('small');
-            if (loadingTitle) loadingTitle.textContent = `${providerName} 正在创作...`;
-            if (loadingSub) loadingSub.textContent = '通常需要 5-30 秒';
+            const qLabel = qualityLevel === 'high' ? '💎' : qualityLevel === 'standard' ? '🎯' : '⚡';
+            if (loadingTitle) loadingTitle.textContent = `${providerName} 正在创作...${qLabel}`;
+            if (loadingSub) loadingSub.textContent = qualityLevel === 'high' ? '高品质模式 · 通常需要 10-60 秒' : qualityLevel === 'fast' ? '快速模式 · 通常需要 3-15 秒' : '通常需要 5-30 秒';
 
             try {
                 if (!provider) {
                     throw new Error(`未知的生成引擎: ${providerKey}`);
                 }
 
-                let base64 = await provider.generate(prompt, modelId, width, height, seed);
+                let base64 = await provider.generate(prompt, modelId, width, height, seed, qualityOpts);
 
                 const item = {
                     id: Date.now(),
@@ -8312,6 +8443,7 @@ ${keywordsList}
                     model: rawModel,
                     provider: providerKey,
                     modelId,
+                    quality: qualityLevel,
                     seed,
                     base64,
                     time: new Date().toISOString()
@@ -8382,10 +8514,12 @@ ${keywordsList}
                                     <span>${item.width}×${item.height}</span>
                                     <span>${formatModelDisplay(item.model || '', item.modelId || '')}</span>
                                     <span>seed:${item.seed}</span>
+                                    ${item.quality ? `<span class="quality-badge" style="color:${item.quality==='high'?'#f59e0b':item.quality==='standard'?'#60a5fa':'#9ca3af'}">${item.quality==='high'?'💎':item.quality==='standard'?'🎯':'⚡'}</span>` : ''}
                                 </div>
                                 <div class="image-gen-item-actions">
                                     <button class="btn btn-ghost btn-sm" onclick="downloadImageGenItem(${idx})" title="下载">下载</button>
                                     <button class="btn btn-ghost btn-sm" onclick="copyImageGenPrompt(${idx})" title="复制提示词">复制</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="deleteImageGenItem(${idx})" title="删除" style="color:#ef4444;">删除</button>
                                 </div>
                             </div>
                         </div>
@@ -8406,10 +8540,11 @@ ${keywordsList}
                     <img src="${item.base64}" alt="${escapeHtml(item.prompt)}">
                     <div class="image-gen-preview-info">
                         <p>${escapeHtml(item.prompt)}</p>
-                        <small>${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}</small>
+                        <small>${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}${item.quality ? ` · ${item.quality==='high'?'💎 高品质':item.quality==='standard'?'🎯 标准':'⚡ 快速'}` : ''}</small>
                         <div style="margin-top:0.65rem;display:flex;gap:0.5rem;justify-content:center;">
                             <button class="btn btn-ghost btn-sm" onclick="downloadImageGenItem(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">⬇ 下载</button>
                             <button class="btn btn-ghost btn-sm" onclick="copyImageGenPrompt(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">📋 复制提示词</button>
+                            <button class="btn btn-ghost btn-sm" onclick="deleteImageGenItem(${idx}); this.closest('.image-gen-preview-overlay').remove();" style="color:#ef4444;border-color:rgba(239,68,68,0.3);">🗑 删除</button>
                         </div>
                     </div>
                 </div>`;
@@ -8435,6 +8570,25 @@ ${keywordsList}
             }).catch(() => {
                 showToast('复制失败', 'error');
             });
+        }
+
+        async function deleteImageGenItem(idx) {
+            await loadImageGenHistory();
+            if (idx < 0 || idx >= imageGenHistory.length) return;
+            const item = imageGenHistory[idx];
+            if (!confirm(`确定要删除这条生成记录吗？\n\n${item.prompt.substring(0, 100)}`)) return;
+            imageGenHistory.splice(idx, 1);
+            try {
+                const db = await _openImageGenDB();
+                const tx = db.transaction('imageGenHistory', 'readwrite');
+                const store = tx.objectStore('imageGenHistory');
+                store.delete(item.id);
+                await new Promise(r => { tx.oncomplete = r; });
+            } catch (e) {
+                console.warn('[ImageGenDB] 删除失败:', e);
+            }
+            await renderImageGenResults();
+            showToast('已删除生成记录', 'success');
         }
 
         async function clearImageGenHistory() {
