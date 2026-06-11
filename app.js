@@ -781,13 +781,35 @@
 
         // 打开密码重置弹窗
         function openResetPasswordModal(userId, email) {
+            console.log('[openResetPasswordModal] 被调用:', { userId, email });
+            
+            if (!userId) {
+                console.error('[openResetPasswordModal] userId 为空');
+                showToast('错误：用户ID不存在', 'error');
+                return;
+            }
+            
+            const targetEl = document.getElementById('resetPwdTarget');
+            const inputEl = document.getElementById('resetPwdInput');
+            const confirmEl = document.getElementById('resetPwdConfirm');
+            const errorEl = document.getElementById('resetPwdError');
+            const overlayEl = document.getElementById('resetPwdOverlay');
+            
+            if (!targetEl || !inputEl || !confirmEl || !errorEl || !overlayEl) {
+                console.error('[openResetPasswordModal] 找不到弹窗元素');
+                showToast('错误：弹窗组件未加载', 'error');
+                return;
+            }
+            
             _resetPwdUserId = userId;
-            document.getElementById('resetPwdTarget').textContent = email;
-            document.getElementById('resetPwdInput').value = '';
-            document.getElementById('resetPwdConfirm').value = '';
-            document.getElementById('resetPwdError').textContent = '';
-            document.getElementById('resetPwdOverlay').style.display = 'flex';
-            setTimeout(() => document.getElementById('resetPwdInput').focus(), 50);
+            targetEl.textContent = email;
+            inputEl.value = '';
+            confirmEl.value = '';
+            errorEl.textContent = '';
+            overlayEl.style.display = 'flex';
+            
+            console.log('[openResetPasswordModal] 弹窗已显示');
+            setTimeout(() => inputEl.focus(), 50);
         }
 
         // 关闭密码重置弹窗
