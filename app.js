@@ -456,21 +456,7 @@
             const ok = await waitForCloud();
             if (!ok) { showToast('云端连接失败', 'error'); return null; }
 
-            // 先刷新 session，防止 token 过期导致 Edge Function 403
-            try {
-                const refreshResult = await Promise.race([
-                    supabaseClient.auth.refreshSession(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('refreshSession timeout')), 8000))
-                ]);
-                if (refreshResult.error) {
-                    console.warn('[ManageUsers] 刷新 session 失败:', refreshResult.error.message);
-                } else if (refreshResult.data?.session) {
-                    console.log('[ManageUsers] session 已刷新');
-                }
-            } catch (refreshErr) {
-                console.warn('[ManageUsers] 刷新 session 超时:', refreshErr.message);
-            }
-
+            // 获取当前 session（不强制刷新，除非 token 即将过期）
             let session = null;
             try {
                 const sessionResult = await Promise.race([
@@ -483,7 +469,34 @@
                 showToast('会话验证超时，请刷新后重试', 'error');
                 return null;
             }
-            if (!session) { showToast('请先登录', 'error'); return null; }
+            
+            if (!session) { 
+                showToast('请先登录', 'error'); 
+                return null; 
+            }
+
+            // 检查 token 是否即将过期（5分钟内），如果是则刷新
+            const tokenExpiry = new Date(session.expires_at * 1000);
+            const now = new Date();
+            const timeUntilExpiry = tokenExpiry - now;
+            
+            if (timeUntilExpiry < 5 * 60 * 1000) {
+                console.log('[ManageUsers] Token 即将过期，刷新 session...');
+                try {
+                    const refreshResult = await Promise.race([
+                        supabaseClient.auth.refreshSession(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('refreshSession timeout')), 8000))
+                    ]);
+                    if (refreshResult.error) {
+                        console.warn('[ManageUsers] 刷新 session 失败:', refreshResult.error.message);
+                    } else if (refreshResult.data?.session) {
+                        session = refreshResult.data.session;
+                        console.log('[ManageUsers] session 已刷新');
+                    }
+                } catch (refreshErr) {
+                    console.warn('[ManageUsers] 刷新 session 超时:', refreshErr.message);
+                }
+            }
 
             try {
                 const resp = await fetch(MANAGE_USERS_URL, {
