@@ -596,9 +596,18 @@
             listEl.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">加载中...</p>';
 
             try {
-                const { data, error } = await supabaseClient.from('user_profiles').select('*').order('created_at', { ascending: false });
-                console.log('[loadAdminUsers] 查询结果:', { count: data?.length, error: error?.message, currentUser: currentUser?.email, isAdmin });
-                if (error) { listEl.innerHTML = '<p style="color: var(--error); text-align: center;">加载失败: ' + error.message + '</p>'; return; }
+                // 优化：只查询需要的字段，减少数据传输量
+                const { data, error } = await supabaseClient
+                    .from('user_profiles')
+                    .select('user_id, email, display_name, status, role, created_at')
+                    .order('created_at', { ascending: false });
+                
+                console.log('[loadAdminUsers] 查询结果:', { count: data?.length, error: error?.message });
+                
+                if (error) { 
+                    listEl.innerHTML = '<p style="color: var(--error); text-align: center;">加载失败: ' + error.message + '</p>'; 
+                    return; 
+                }
 
                 if (!data || data.length === 0) {
                     _adminUsersCache = [];
@@ -607,7 +616,6 @@
                 }
 
                 _adminUsersCache = data;
-                console.log('[loadAdminUsers] 缓存用户列表:', _adminUsersCache.map(u => ({ email: u.email, role: u.role, status: u.status })));
                 renderAdminUserList();
             } catch (e) {
                 console.error('[loadAdminUsers] 异常:', e);
@@ -657,7 +665,7 @@
                         actionsHtml = `<button class="admin-btn-action" style="color:#60a5fa;border-color:rgba(96,165,250,0.3);" onclick="promoteToWhitelist('${u.user_id}','${escapeHtml(u.email || '')}')" title="添加白名单">加白</button>`;
                         actionsHtml += `<button class="admin-btn-action warn" onclick="blockUser('${u.user_id}')" title="拉黑">拉黑</button>`;
                     }
-                    actionsHtml += `<button class="admin-btn-action" style="color:#a78bfa;border-color:rgba(167,139,250,0.3);" onclick="openResetPasswordModal('${u.user_id}','${escapeHtml(u.email || '')}')" title="重置密码">密码</button>`;
+                    actionsHtml += `<button class="admin-btn-action" style="color:#a78bfa;border-color:rgba(167,139,250,0.3);" onclick="openResetPasswordModal('${u.user_id}','${escapeHtml(u.email || '')}')" title="查看/修改密码">密码</button>`;
                     actionsHtml += `<button class="admin-btn-action danger" onclick="deleteUser('${u.user_id}','${escapeHtml(u.email || '')}')" title="删除">删除</button>`;
                 }
 
