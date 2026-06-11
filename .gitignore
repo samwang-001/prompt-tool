@@ -1,8 +1,17 @@
 node_modules/
 .env
 .DS_Store
+*.log
 
 # Supabase temp files
 supabase/.temp/
 supabase_bin.tar.gz
 supabase_cli.tar.gz
+
+# Playwright test artifacts
+.playwright-cli/
+
+# Backup files
+*.fixed
+*.restored
+*.backup

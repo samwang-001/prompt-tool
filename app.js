@@ -1,14 +1,15 @@
         // ==================== Supabase Cloud Storage ====================
-        const SUPABASE_URL = 'https://aishmynicfrueempsbun.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpc2hteW5pY2ZydWVlbXBzYnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDczMTksImV4cCI6MjA5NjE4MzMxOX0.tNxiKnRADMDKJaDYaFpm6gTEg_Nv8bI8Ql05SdGsST4';
-        // ⚠️ 替换为你的管理员邮箱
-        const ADMIN_EMAIL = 'hvho1982@163.com';
-        // 应用地址（邮箱验证回调用）
-        const APP_URL = 'https://www.prompt-tool.dedyn.io';
+        // 从配置管理读取（不再硬编码）
+        const SUPABASE_URL = (typeof getConfig !== 'undefined' && getConfig('supabase.url')) || 'https://aishmynicfrueempsbun.supabase.co';
+        const SUPABASE_ANON_KEY = (typeof getConfig !== 'undefined' && getConfig('supabase.anonKey')) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpc2hteW5pY2ZydWVlbXBzYnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDczMTksImV4cCI6MjA5NjE4MzMxOX0.tNxiKnRADMDKJaDYaFpm6gTEg_Nv8bI8Ql05SdGsST4';
+        const ADMIN_EMAIL = (typeof getConfig !== 'undefined' && getConfig('admin.email')) || 'hvho1982@163.com';
+        const APP_URL = (typeof getConfig !== 'undefined' && getConfig('app.url')) || 'https://www.prompt-tool.dedyn.io';
+        
         // Supabase Edge Function 地址（本地开发走代理避免 CORS）
-        const MANAGE_USERS_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        const isDevEnv = typeof isDevelopment !== 'undefined' ? isDevelopment() : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const MANAGE_USERS_URL = isDevEnv
             ? '/api/manage-users'
-            : 'https://aishmynicfrueempsbun.supabase.co/functions/v1/manage-users';
+            : `${SUPABASE_URL}/functions/v1/manage-users`;
 
         let supabaseClient = null;
         let cloudReady = false;
