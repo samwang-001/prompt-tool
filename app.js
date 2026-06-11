@@ -845,15 +845,38 @@
 
         // 发送密码重置邮件
         async function sendPasswordResetEmail(userId, email) {
-            if (!userId) return;
+            console.log('[sendPasswordResetEmail] 被调用:', { userId, email });
+            
+            if (!userId) {
+                console.error('[sendPasswordResetEmail] userId 为空');
+                showToast('错误：用户ID不存在', 'error');
+                return;
+            }
+            
             const targetId = userId || _resetPwdUserId;
             const targetEmail = email || document.getElementById('resetPwdTarget')?.textContent || '';
+            
+            console.log('[sendPasswordResetEmail] 目标:', { targetId, targetEmail });
+            
             const confirmed = confirm(`确定向 ${targetEmail} 发送密码重置邮件？用户将收到一封包含重置链接的邮件。`);
-            if (!confirmed) return;
+            if (!confirmed) {
+                console.log('[sendPasswordResetEmail] 用户取消操作');
+                return;
+            }
+            
             showToast('正在发送...', 'info');
-            const result = await callManageUsers('send_reset_email', { user_id: targetId });
-            if (result) {
-                showToast(result.message || '重置邮件已发送', 'success');
+            
+            try {
+                const result = await callManageUsers('send_reset_email', { user_id: targetId });
+                console.log('[sendPasswordResetEmail] 结果:', result);
+                if (result && result.success) {
+                    showToast(result.message || '重置邮件已发送', 'success');
+                } else {
+                    showToast('发送失败: ' + (result?.error || '未知错误'), 'error');
+                }
+            } catch (err) {
+                console.error('[sendPasswordResetEmail] 异常:', err);
+                showToast('发送失败: ' + err.message, 'error');
             }
         }
 
