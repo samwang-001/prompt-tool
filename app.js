@@ -666,6 +666,7 @@
                         actionsHtml += `<button class="admin-btn-action warn" onclick="blockUser('${u.user_id}')" title="拉黑">拉黑</button>`;
                     }
                     actionsHtml += `<button class="admin-btn-action" style="color:#a78bfa;border-color:rgba(167,139,250,0.3);" onclick="openResetPasswordModal('${u.user_id}','${escapeHtml(u.email || '')}')" title="查看/修改密码">密码</button>`;
+                    actionsHtml += `<button class="admin-btn-action" style="color:#10b981;border-color:rgba(16,185,129,0.3);" onclick="sendPasswordResetEmail('${u.user_id}','${escapeHtml(u.email || '')}')" title="发送密码重置邮件">重置邮件</button>`;
                     actionsHtml += `<button class="admin-btn-action danger" onclick="deleteUser('${u.user_id}','${escapeHtml(u.email || '')}')" title="删除">删除</button>`;
                 }
 
@@ -864,6 +865,11 @@
                 document.getElementById('whitelistUsername').value = '';
                 document.getElementById('whitelistPassword').value = '';
                 document.getElementById('whitelistDisplayName').value = '';
+                
+                // 显示密码给用户（重要！）
+                const passwordMsg = `白名单用户已添加！\n\n用户名: ${username}\n密码: ${password}\n\n请立即保存此密码，之后将无法查看！`;
+                alert(passwordMsg);
+                
                 showToast(result.message || '白名单用户已添加', 'success');
                 await loadWhitelistList();
                 await loadAdminUsers();
