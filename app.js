@@ -8014,6 +8014,14 @@ ${keywordsList}
                 icon: '📡',
                 base: 'pollinations',
                 async generate(prompt, modelId, width, height, seed) {
+                    // 计算期望的比例
+                    const expectedRatio = computeRatio(width, height);
+                    console.log(`[ImageGen:Pollinations] 请求参数:`);
+                    console.log(`  - 模型: ${modelId}`);
+                    console.log(`  - 尺寸: ${width}×${height}`);
+                    console.log(`  - 比例: ${expectedRatio.w}:${expectedRatio.h}`);
+                    console.log(`  - Seed: ${seed}`);
+                    
                     const params = new URLSearchParams({
                         width: String(width),
                         height: String(height),
@@ -8021,7 +8029,7 @@ ${keywordsList}
                         model: modelId
                     });
                     const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
-                    console.log('[ImageGen:Pollinations] 请求:', url);
+                    console.log('[ImageGen:Pollinations] 完整URL:', url);
 
                     let resp;
                     let lastNetErr;
@@ -8055,9 +8063,35 @@ ${keywordsList}
                     if (!resp.ok) throw new Error(`[HTTP ${resp.status}] Pollinations 服务异常`);
                     const blob = await resp.blob();
                     if (blob.size < 100) throw new Error('Pollinations 返回了空图片');
+                    
+                    // 验证返回的图片
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result);
+                        reader.onload = () => {
+                            // 创建临时 Image 对象检查实际尺寸
+                            const img = new Image();
+                            img.onload = () => {
+                                const actualRatio = computeRatio(img.width, img.height);
+                                const isMatch = actualRatio.w === expectedRatio.w && actualRatio.h === expectedRatio.h;
+                                
+                                console.log(`[ImageGen:Pollinations] 生成结果:`);
+                                console.log(`  - 实际尺寸: ${img.width}×${img.height}`);
+                                console.log(`  - 实际比例: ${actualRatio.w}:${actualRatio.h}`);
+                                console.log(`  - 期望比例: ${expectedRatio.w}:${expectedRatio.h}`);
+                                console.log(`  - 比例匹配: ${isMatch ? '✅' : '❌'}`);
+                                
+                                if (!isMatch) {
+                                    console.warn(`[ImageGen:Pollinations] ⚠️ 比例不匹配！Pollinations API 可能忽略了尺寸参数`);
+                                }
+                                
+                                resolve(reader.result);
+                            };
+                            img.onerror = () => {
+                                console.warn('[ImageGen:Pollinations] 无法加载图片验证尺寸');
+                                resolve(reader.result);
+                            };
+                            img.src = reader.result;
+                        };
                         reader.onerror = () => reject(new Error('图片数据读取失败'));
                         reader.readAsDataURL(blob);
                     });
