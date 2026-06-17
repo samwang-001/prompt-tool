@@ -10,6 +10,8 @@
         const MANAGE_USERS_URL = isDevEnv
             ? '/api/manage-users'
             : `${SUPABASE_URL}/functions/v1/manage-users`;
+        
+        console.log('[App] 环境:', isDevEnv ? '开发' : '生产', '| 域名:', window.location.hostname, '| Edge Function:', MANAGE_USERS_URL);
 
         let supabaseClient = null;
         let cloudReady = false;
