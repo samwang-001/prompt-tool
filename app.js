@@ -8101,18 +8101,49 @@ ${keywordsList}
                         return new Error(`[模型] ${mid}: ${msg}`);
                     };
                     const _doGenerate = async (extraOpts) => {
-                        const options = { model: modelId, ratio };
+                        // Puter.js API 参数策略：
+                        // 1. 优先使用 ratio（大多数模型支持）
+                        // 2. 如果指定了 width/height，尝试直接传递
+                        // 3. 根据模型类型动态调整
+                        const options = { model: modelId };
+                        
+                        // 对于 GPT Image 系列，使用 ratio
+                        if (modelId.includes('gpt-image') || modelId.includes('dall-e')) {
+                            options.ratio = ratio;
+                            console.log(`[ImageGen:Puter] 使用 ratio 模式: ${ratio.w}:${ratio.h}`);
+                        } else {
+                            // 其他模型尝试使用 width/height
+                            options.width = width;
+                            options.height = height;
+                            console.log(`[ImageGen:Puter] 使用 width/height 模式: ${width}×${height}`);
+                        }
+                        
                         if (seed != null) options.seed = seed;
                         if (extraOpts && Object.keys(extraOpts).length > 0) {
                             Object.assign(options, extraOpts);
                         }
-                        console.log(`[ImageGen:Puter] 模型: ${modelId}, 尺寸: ${width}×${height}, 比例: ${ratio.w}:${ratio.h}, seed: ${seed}, 选项:`, extraOpts || '无');
+                        console.log(`[ImageGen:Puter] 模型: ${modelId}, 最终参数:`, JSON.stringify(options));
                         const img = await puter.ai.txt2img(prompt, options);
                         if (!img || !img.src) {
                             throw new Error('Puter.js 返回结果为空');
                         }
                         if (img.src.startsWith('data:')) {
-                            console.log('[ImageGen:Puter] 生成成功, 尺寸:', img.naturalWidth, '×', img.naturalHeight);
+                            const actualRatio = computeRatio(img.naturalWidth, img.naturalHeight);
+                            const expectedRatioStr = `${ratio.w}:${ratio.h}`;
+                            const actualRatioStr = `${actualRatio.w}:${actualRatio.h}`;
+                            const isMatch = actualRatio.w === ratio.w && actualRatio.h === ratio.h;
+                            
+                            console.log(`[ImageGen:Puter] 生成成功`);
+                            console.log(`  - 请求尺寸: ${width}×${height}`);
+                            console.log(`  - 期望比例: ${expectedRatioStr}`);
+                            console.log(`  - 实际尺寸: ${img.naturalWidth}×${img.naturalHeight}`);
+                            console.log(`  - 实际比例: ${actualRatioStr}`);
+                            console.log(`  - 比例匹配: ${isMatch ? '✅' : '❌'}`);
+                            
+                            if (!isMatch) {
+                                console.warn(`[ImageGen:Puter] ⚠️ 比例不匹配！可能需要调整参数传递方式`);
+                            }
+                            
                             return img.src;
                         }
                         const resp = await fetch(img.src);
