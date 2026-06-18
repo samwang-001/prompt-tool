@@ -6614,6 +6614,9 @@ ${sampleStr}
             renderOptStatusBar();
             updateFormulaSelect(); // 初始化公式选择器
 
+            // 自动切换到可用的模型（避免默认选中已耗尽的模型）
+            autoSwitchToAvailableModel();
+
             // 预加载图片生成历史到 IndexedDB，确保切换视图时立即可用
             try { await loadImageGenHistory(); } catch (e) { console.warn('[Init] 图片生成历史预加载失败:', e); }
             if (currentView === 'image-gen') renderImageGenResults();
@@ -8436,7 +8439,7 @@ ${keywordsList}
             // === OpenAI 模型 (Puter.js 原生支持 quality 参数) ===
             if (id.startsWith('gpt-image-2')) {
                 opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'auto';
-            } else if (id.startsWith('gpt-image-') || id.startsWith('gpt-image')) {
+            } else if (id.startsWith('gpt-image-')) {
                 opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'high';
             } else if (id === 'dall-e-3' || id === 'dall-e-2') {
                 opts.quality = qualityLevel === 'high' ? 'hd' : 'standard';
@@ -8464,7 +8467,6 @@ ${keywordsList}
         function getModelMaxResolution(modelId) {
             const id = (modelId || '').toLowerCase();
             if (id.startsWith('gemini-') || id.includes('imagen')) return 4096;
-            if (id.includes('flux-2')) return 4096;
             if (id.includes('flux-1.1-pro')) return 2048;
             if (id.includes('flux-schnell')) return 1440;
             if (id.includes('seedream')) return 2048;
