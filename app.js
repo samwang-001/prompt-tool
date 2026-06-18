@@ -8166,7 +8166,7 @@ ${keywordsList}
                             }
                         }
                     }
-                    const ratio = computeRatio(width, height);
+                    const ratioStr = `${computeRatio(width, height).w}:${computeRatio(width, height).h}`;
                     const _handleError = (err, mid) => {
                         const msg = err.message || String(err);
                         if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('network')) {
@@ -8194,18 +8194,13 @@ ${keywordsList}
                     };
                     const _doGenerate = async (extraOpts) => {
                         // Puter.js API 参数策略：
-                        // 1. 优先使用 ratio（大多数模型支持）
-                        // 2. 如果指定了 width/height，尝试直接传递
-                        // 3. 根据模型类型动态调整
-                        const options = { model: modelId };
+                        // 1. 传递 width/height 确保尺寸精准
+                        // 2. 同时传递 ratio 字符串确保比例正确
+                        const options = { model: modelId, width, height };
                         
-                        // 对于 GPT Image 系列，使用 ratio
+                        // 对于 GPT Image 系列，使用 ratio 字符串
                         if (modelId.includes('gpt-image') || modelId.includes('dall-e')) {
-                            options.ratio = ratio;
-                        } else {
-                            // 其他模型尝试使用 width/height
-                            options.width = width;
-                            options.height = height;
+                            options.ratio = ratioStr;
                         }
                         
                         if (seed != null) options.seed = seed;
@@ -8382,8 +8377,8 @@ ${keywordsList}
         }
 
         function applyCustomSize() {
-            const w = parseInt(document.getElementById('customWidth').value);
-            const h = parseInt(document.getElementById('customHeight').value);
+            const w = parseInt(document.getElementById('imgGenCustomWidth').value);
+            const h = parseInt(document.getElementById('imgGenCustomHeight').value);
             if (!w || !h || w < 64 || h < 64 || w > 4096 || h > 4096) {
                 showToast('请输入有效尺寸（64-4096）', 'warning');
                 return;
@@ -8395,8 +8390,8 @@ ${keywordsList}
         }
 
         function saveCustomPreset() {
-            let w = parseInt(document.getElementById('customWidth').value);
-            let h = parseInt(document.getElementById('customHeight').value);
+            let w = parseInt(document.getElementById('imgGenCustomWidth').value);
+            let h = parseInt(document.getElementById('imgGenCustomHeight').value);
             if (!w || !h) {
                 w = parseInt(document.getElementById('imageGenWidth').value);
                 h = parseInt(document.getElementById('imageGenHeight').value);
@@ -8421,8 +8416,8 @@ ${keywordsList}
             const h = parseInt(btn.dataset.h);
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             setImageGenSize(w, h);
-            document.getElementById('customWidth').value = w;
-            document.getElementById('customHeight').value = h;
+            document.getElementById('imgGenCustomWidth').value = w;
+            document.getElementById('imgGenCustomHeight').value = h;
         }
 
         function deleteCustomPreset(e, index) {
@@ -8528,8 +8523,8 @@ ${keywordsList}
             const h = parseInt(btn.dataset.h);
             setImageGenSize(w, h);
             // 同步清空自定义输入框
-            document.getElementById('customWidth').value = '';
-            document.getElementById('customHeight').value = '';
+            document.getElementById('imgGenCustomWidth').value = '';
+            document.getElementById('imgGenCustomHeight').value = '';
             const hint = document.getElementById('imageGenSizeHint');
             hint.style.display = 'none';
         }
@@ -8572,14 +8567,9 @@ ${keywordsList}
                 w = parseInt(exactMatch[1]);
                 h = parseInt(exactMatch[2]);
                 hint = `${w}×${h}`;
-                // 按比例缩放以适配模型最大分辨率
-                if (w > maxRes || h > maxRes) {
-                    const r = w / h;
-                    if (w >= h) { w = Math.min(maxRes, w); h = Math.round(w / r); }
-                    else { h = Math.min(maxRes, h); w = Math.round(h * r); }
-                }
-                w = Math.max(256, w);
-                h = Math.max(256, h);
+                // 只做最小尺寸保护，不做等比缩放（避免变形）
+                w = Math.max(64, w);
+                h = Math.max(64, h);
                 return { width: w, height: h, hint };
             }
 
