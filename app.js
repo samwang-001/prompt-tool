@@ -8098,29 +8098,20 @@ ${keywordsList}
                 async generate(prompt, modelId, width, height, seed) {
                     // Pollinations 标准尺寸映射（避免内部缩放导致拉伸）
                     const STANDARD_SIZES = [
-                        { w: 512, h: 512 },   // 1:1
-                        { w: 768, h: 768 },   // 1:1
                         { w: 1024, h: 1024 }, // 1:1
-                        { w: 1024, h: 576 },  // 16:9
                         { w: 1280, h: 720 },  // 16:9
-                        { w: 576, h: 1024 },  // 9:16
                         { w: 720, h: 1280 },  // 9:16
                         { w: 768, h: 1024 },  // 3:4
                         { w: 1024, h: 768 },  // 4:3
                     ];
                     
-                    // 查找最接近的标准尺寸（比例优先，比例相同时选像素数更接近的）
+                    // 查找最接近的标准尺寸
                     let bestSize = { w: width, h: height };
                     let minDiff = Infinity;
-                    const requestedPixels = width * height;
                     
                     for (const size of STANDARD_SIZES) {
                         const ratioDiff = Math.abs((size.w / size.h) - (width / height));
-                        const sizePixels = size.w * size.h;
-                        // 比例差异更小，或比例相同但像素数更接近，则选用
-                        if (ratioDiff < minDiff - 0.0001 ||
-                            (Math.abs(ratioDiff - minDiff) < 0.0001 &&
-                             Math.abs(sizePixels - requestedPixels) < Math.abs(bestSize.w * bestSize.h - requestedPixels))) {
+                        if (ratioDiff < minDiff) {
                             minDiff = ratioDiff;
                             bestSize = size;
                         }
