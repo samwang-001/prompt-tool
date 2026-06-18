@@ -8895,7 +8895,7 @@ ${keywordsList}
                 <div class="image-gen-grid">
                     ${imageGenHistory.map((item, idx) => `
                         <div class="image-gen-item">
-                            <div class="image-gen-item-img">
+                            <div class="image-gen-item-img" style="aspect-ratio:${item.width}/${item.height}">
                                 <img src="${item.base64}" alt="${escapeHtml(item.prompt)}" loading="lazy"
                                      onclick="previewImageGenItem(${idx})">
                             </div>

@@ -4232,6 +4232,8 @@
             cursor: pointer;
             overflow: hidden;
             position: relative;
+            aspect-ratio: auto;
+            container-type: inline-size;
         }
         .image-gen-item-img::after {
             content: '🔍 预览';
@@ -4253,9 +4255,8 @@
         }
         .image-gen-item-img img {
             display: block;
-            width: 100%;
+            max-width: 100%;
             height: auto;
-            object-fit: contain;
             transition: transform 0.35s ease;
         }
         .image-gen-item-img:hover img {
