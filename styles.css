@@ -4122,11 +4122,15 @@
         }
         .image-gen-item-img {
             width: 100%;
-            aspect-ratio: 1;
+            min-height: 200px;
+            max-height: 600px;
             background: linear-gradient(135deg, #0a0f1a 0%, #111827 100%);
             cursor: pointer;
             overflow: hidden;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .image-gen-item-img::after {
             content: '🔍 预览';
@@ -4148,8 +4152,9 @@
         }
         .image-gen-item-img img {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: auto;
+            max-height: 100%;
+            object-fit: contain;
             transition: transform 0.35s ease;
         }
         .image-gen-item-img:hover img {
