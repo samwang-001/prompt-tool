@@ -8008,6 +8008,84 @@ ${keywordsList}
             return { w: Math.round(w / d), h: Math.round(h / d) };
         }
 
+
+        // 模型额度管理
+        const MODEL_QUOTA_STATUS = {
+            'gpt-image-2': { exhausted: true, message: '免费额度已用完' },
+            'gpt-image-1.5': { exhausted: true, message: '免费额度已用完' },
+            'gpt-image-1': { exhausted: true, message: '免费额度已用完' },
+            'gpt-image-1-mini': { exhausted: true, message: '免费额度已用完' }
+        };
+
+        // 检查模型额度状态
+        function checkModelQuota(modelId) {
+            if (MODEL_QUOTA_STATUS[modelId] && MODEL_QUOTA_STATUS[modelId].exhausted) {
+                return {
+                    available: false,
+                    message: MODEL_QUOTA_STATUS[modelId].message
+                };
+            }
+            return { available: true };
+        }
+
+        // 自动切换到可用的模型
+        function autoSwitchToAvailableModel() {
+            const select = document.getElementById('imageGenModel');
+            if (!select) return;
+            
+            // 优先选择 DALL·E 3
+            for (const option of select.options) {
+                if (!option.disabled && option.value.includes('dall-e-3')) {
+                    select.value = option.value;
+                    showToast(`已自动切换到: ${option.text}`, 'info');
+                    return;
+                }
+            }
+            
+            // 其次选择 Gemini
+            for (const option of select.options) {
+                if (!option.disabled && option.value.includes('gemini')) {
+                    select.value = option.value;
+                    showToast(`已自动切换到: ${option.text}`, 'info');
+                    return;
+                }
+            }
+            
+            // 最后选择 Flux
+            for (const option of select.options) {
+                if (!option.disabled && option.value.includes('flux')) {
+                    select.value = option.value;
+                    showToast(`已自动切换到: ${option.text}`, 'info');
+                    return;
+                }
+            }
+        }
+
+
+
+        // 标记模型额度耗尽
+        function markModelExhausted(modelId, message) {
+            MODEL_QUOTA_STATUS[modelId] = {
+                exhausted: true,
+                message: message || '免费额度已用完'
+            };
+            
+            // 更新 UI
+            const select = document.getElementById('imageGenModel');
+            if (select) {
+                Array.from(select.options).forEach(option => {
+                    if (option.value.includes(`::${modelId}`) || option.value === modelId) {
+                        option.disabled = true;
+                        if (!option.text.includes('[❌')) {
+                            option.text = option.text.replace(/\s*\[.*?\]/, '') + ` [❌ ${message || '额度已耗尽'}]`;
+                        }
+                    }
+                });
+            }
+            
+            console.warn(`[Quota] 模型 ${modelId} 额度已耗尽：${message || '免费额度已用完'}`);
+        }
+
         const IMAGE_GEN_PROVIDERS = {
             pollinations: {
                 name: 'Pollinations',
@@ -8159,7 +8237,9 @@ ${keywordsList}
                             return new Error(`[网络] Puter.js 请求超时，请换模型或稍后重试`);
                         }
                         if (msg.includes('not enough') || msg.includes('balance') || msg.includes('credit') || msg.includes('quota') || msg.includes('limit') || msg.includes('payment') || msg.includes('402')) {
-                            return new Error(`[额度] ${mid} 免费额度不足，请切换其他模型`);
+                            // 自动标记该模型额度耗尽
+                            markModelExhausted(mid, '免费额度不足');
+                            return new Error(`[额度] ${mid} 免费额度不足，已自动标记，请切换其他模型`);
                         }
                         if (msg.includes('rate') || msg.includes('too many')) {
                             return new Error(`[限流] ${mid} 请求太频繁，请稍后重试`);
