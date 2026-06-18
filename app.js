@@ -6620,6 +6620,7 @@ ${sampleStr}
             // 预加载图片生成历史到 IndexedDB，确保切换视图时立即可用
             try { await loadImageGenHistory(); } catch (e) { console.warn('[Init] 图片生成历史预加载失败:', e); }
             if (currentView === 'image-gen') renderImageGenResults();
+            renderCustomPresets();
 
             // 保存数据版本号
             localStorage.setItem('data-version', DATA_VERSION);
@@ -8351,6 +8352,90 @@ ${keywordsList}
             document.getElementById('imageGenSizeLabel').textContent = `${w}×${h}`;
         }
 
+        // ==================== 自定义尺寸 & 常用预设 ====================
+        const CUSTOM_PRESETS_KEY = 'imageGenCustomPresets';
+
+        function loadCustomPresets() {
+            try {
+                const raw = localStorage.getItem(CUSTOM_PRESETS_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) { return []; }
+        }
+
+        function saveCustomPresetsData(presets) {
+            localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(presets));
+        }
+
+        function renderCustomPresets() {
+            const row = document.getElementById('imageGenPresetsRow');
+            if (!row) return;
+            const presets = loadCustomPresets();
+            if (presets.length === 0) {
+                row.style.display = 'none';
+                row.innerHTML = '';
+                return;
+            }
+            row.style.display = 'flex';
+            row.innerHTML = presets.map((p, i) =>
+                `<button class="img-preset-btn" onclick="selectPreset(this)" data-w="${p.w}" data-h="${p.h}" data-id="${i}" title="${p.w}×${p.h}">${p.w}×${p.h}<span class="preset-delete" onclick="deleteCustomPreset(event, ${i})">×</span></button>`
+            ).join('');
+        }
+
+        function applyCustomSize() {
+            const w = parseInt(document.getElementById('customWidth').value);
+            const h = parseInt(document.getElementById('customHeight').value);
+            if (!w || !h || w < 64 || h < 64 || w > 4096 || h > 4096) {
+                showToast('请输入有效尺寸（64-4096）', 'warning');
+                return;
+            }
+            document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
+            setImageGenSize(w, h);
+            document.getElementById('imageGenSizeHint').style.display = 'none';
+            showToast(`已设为 ${w}×${h}`, 'success');
+        }
+
+        function saveCustomPreset() {
+            let w = parseInt(document.getElementById('customWidth').value);
+            let h = parseInt(document.getElementById('customHeight').value);
+            if (!w || !h) {
+                w = parseInt(document.getElementById('imageGenWidth').value);
+                h = parseInt(document.getElementById('imageGenHeight').value);
+            }
+            if (!w || !h || w < 64 || h < 64 || w > 4096 || h > 4096) {
+                showToast('尺寸需在 64-4096 范围内', 'warning');
+                return;
+            }
+            const presets = loadCustomPresets();
+            if (presets.some(p => p.w === w && p.h === h)) {
+                showToast('该尺寸已存在', 'warning');
+                return;
+            }
+            presets.push({ w, h });
+            saveCustomPresetsData(presets);
+            renderCustomPresets();
+            showToast(`已保存 ${w}×${h} 为常用尺寸`, 'success');
+        }
+
+        function selectPreset(btn) {
+            const w = parseInt(btn.dataset.w);
+            const h = parseInt(btn.dataset.h);
+            document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
+            setImageGenSize(w, h);
+            document.getElementById('customWidth').value = w;
+            document.getElementById('customHeight').value = h;
+        }
+
+        function deleteCustomPreset(e, index) {
+            e.stopPropagation(); e.preventDefault();
+            const presets = loadCustomPresets();
+            if (index >= 0 && index < presets.length) {
+                presets.splice(index, 1);
+                saveCustomPresetsData(presets);
+                renderCustomPresets();
+                showToast('已删除预设尺寸', 'success');
+            }
+        }
+
         // ==================== 画质参数映射 ====================
         // 注意：Puter.js 作为中间层，仅支持 quality 参数。
         // output_quality / steps / prompt_upsampling 是 Replicate 原生参数，
@@ -8442,6 +8527,9 @@ ${keywordsList}
             const w = parseInt(btn.dataset.w);
             const h = parseInt(btn.dataset.h);
             setImageGenSize(w, h);
+            // 同步清空自定义输入框
+            document.getElementById('customWidth').value = '';
+            document.getElementById('customHeight').value = '';
             const hint = document.getElementById('imageGenSizeHint');
             hint.style.display = 'none';
         }

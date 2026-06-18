@@ -19,7 +19,7 @@
     <link rel="dns-prefetch" href="https://aishmynicfrueempsbun.supabase.co">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
         <!-- CSS 版本控制 - 强制浏览器刷新 -->
-        <link rel="stylesheet" href="styles.css?v=20260618-v12">
+        <link rel="stylesheet" href="styles.css?v=20260618-v13">
 </head>
 <body>
     <!-- Header -->
@@ -410,6 +410,18 @@
                                 <button class="ratio-btn smart-btn" data-ratio="auto" data-w="0" data-h="0" onclick="selectSmartSize(this)" title="从提示词中智能识别尺寸">✨ 智能</button>
                             </div>
                             <div class="image-gen-size-hint" id="imageGenSizeHint" style="display:none;"></div>
+                            <!-- 自定义尺寸 -->
+                            <div class="image-gen-custom-row" id="imageGenCustomRow">
+                                <div class="custom-size-inputs">
+                                    <input type="number" id="customWidth" class="custom-size-input" placeholder="宽" min="64" max="4096" step="16" inputmode="numeric">
+                                    <span class="custom-size-sep">×</span>
+                                    <input type="number" id="customHeight" class="custom-size-input" placeholder="高" min="64" max="4096" step="16" inputmode="numeric">
+                                </div>
+                                <button class="ratio-btn custom-apply-btn" onclick="applyCustomSize()" title="应用自定义尺寸">✓ 应用</button>
+                                <button class="ratio-btn custom-save-btn" onclick="saveCustomPreset()" title="保存为常用尺寸">💾 保存</button>
+                            </div>
+                            <!-- 常用预设 -->
+                            <div class="image-gen-presets-row" id="imageGenPresetsRow" style="display:none;"></div>
                             <!-- 隐藏字段，doImageGen 读取 -->
                             <input type="hidden" id="imageGenWidth" value="1024">
                             <input type="hidden" id="imageGenHeight" value="1024">
