@@ -8097,12 +8097,7 @@ ${keywordsList}
                 base: 'pollinations',
                 async generate(prompt, modelId, width, height, seed) {
                     const expectedRatio = computeRatio(width, height);
-                    console.log(`[ImageGen:Pollinations] 请求参数:`);
-                    console.log(`  - 模型: ${modelId}`);
-                    console.log(`  - 尺寸: ${width}×${height}`);
-                    console.log(`  - 比例: ${expectedRatio.w}:${expectedRatio.h}`);
-                    console.log(`  - Seed: ${seed}`);
-                    
+
                     const params = new URLSearchParams({
                         width: String(width),
                         height: String(height),
@@ -8110,7 +8105,6 @@ ${keywordsList}
                         model: modelId
                     });
                     const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
-                    console.log('[ImageGen:Pollinations] 完整URL:', url);
 
                     let resp;
                     let lastNetErr;
@@ -8144,37 +8138,12 @@ ${keywordsList}
                     if (!resp.ok) throw new Error(`[HTTP ${resp.status}] Pollinations 服务异常`);
                     const blob = await resp.blob();
                     if (blob.size < 100) throw new Error('Pollinations 返回了空图片');
-                    
-                    // 验证返回的图片
+
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
                     return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                            // 创建临时 Image 对象检查实际尺寸
-                            const img = new Image();
-                            img.onload = () => {
-                                const actualRatio = computeRatio(img.width, img.height);
-                                const isMatch = actualRatio.w === expectedRatio.w && actualRatio.h === expectedRatio.h;
-                                
-                                console.log(`[ImageGen:Pollinations] 生成结果:`);
-                                console.log(`  - 实际尺寸: ${img.width}×${img.height}`);
-                                console.log(`  - 实际比例: ${actualRatio.w}:${actualRatio.h}`);
-                                console.log(`  - 期望比例: ${expectedRatio.w}:${expectedRatio.h}`);
-                                console.log(`  - 比例匹配: ${isMatch ? '✅' : '❌'}`);
-                                
-                                if (!isMatch) {
-                                    console.warn(`[ImageGen:Pollinations] ⚠️ 比例不匹配！Pollinations API 可能忽略了尺寸参数`);
-                                }
-                                
-                                resolve(reader.result);
-                            };
-                            img.onerror = () => {
-                                console.warn('[ImageGen:Pollinations] 无法加载图片验证尺寸');
-                                resolve(reader.result);
-                            };
-                            img.src = reader.result;
-                        };
+                        reader.onload = () => resolve(reader.result);
                         reader.onerror = () => reject(new Error('图片数据读取失败'));
-                        reader.readAsDataURL(blob);
                     });
                 }
             },
@@ -8189,10 +8158,8 @@ ${keywordsList}
                     // 检查登录状态，未登录则弹窗登录（避免整页跳转到虚拟桌面）
                     if (puter.auth && typeof puter.auth.isSignedIn === 'function') {
                         if (!puter.auth.isSignedIn()) {
-                            console.log('[ImageGen:Puter] 未登录，弹窗授权...');
                             try {
                                 await puter.auth.signIn();
-                                console.log('[ImageGen:Puter] 登录成功');
                             } catch (authErr) {
                                 throw new Error('[认证] Puter 登录失败或已取消，请重试');
                             }
@@ -8234,40 +8201,21 @@ ${keywordsList}
                         // 对于 GPT Image 系列，使用 ratio
                         if (modelId.includes('gpt-image') || modelId.includes('dall-e')) {
                             options.ratio = ratio;
-                            console.log(`[ImageGen:Puter] 使用 ratio 模式: ${ratio.w}:${ratio.h}`);
                         } else {
                             // 其他模型尝试使用 width/height
                             options.width = width;
                             options.height = height;
-                            console.log(`[ImageGen:Puter] 使用 width/height 模式: ${width}×${height}`);
                         }
                         
                         if (seed != null) options.seed = seed;
                         if (extraOpts && Object.keys(extraOpts).length > 0) {
                             Object.assign(options, extraOpts);
                         }
-                        console.log(`[ImageGen:Puter] 模型: ${modelId}, 最终参数:`, JSON.stringify(options));
                         const img = await puter.ai.txt2img(prompt, options);
                         if (!img || !img.src) {
                             throw new Error('Puter.js 返回结果为空');
                         }
                         if (img.src.startsWith('data:')) {
-                            const actualRatio = computeRatio(img.naturalWidth, img.naturalHeight);
-                            const expectedRatioStr = `${ratio.w}:${ratio.h}`;
-                            const actualRatioStr = `${actualRatio.w}:${actualRatio.h}`;
-                            const isMatch = actualRatio.w === ratio.w && actualRatio.h === ratio.h;
-                            
-                            console.log(`[ImageGen:Puter] 生成成功`);
-                            console.log(`  - 请求尺寸: ${width}×${height}`);
-                            console.log(`  - 期望比例: ${expectedRatioStr}`);
-                            console.log(`  - 实际尺寸: ${img.naturalWidth}×${img.naturalHeight}`);
-                            console.log(`  - 实际比例: ${actualRatioStr}`);
-                            console.log(`  - 比例匹配: ${isMatch ? '✅' : '❌'}`);
-                            
-                            if (!isMatch) {
-                                console.warn(`[ImageGen:Puter] ⚠️ 比例不匹配！可能需要调整参数传递方式`);
-                            }
-                            
                             return img.src;
                         }
                         const resp = await fetch(img.src);
@@ -8498,12 +8446,10 @@ ${keywordsList}
             hint.style.display = 'none';
         }
 
-        function selectSmartSize(btn) {
-            document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+        // 提取智能尺寸解析逻辑（被 selectSmartSize 和 doImageGen 复用）
+        function applySmartSize() {
             const prompt = document.getElementById('imageGenPrompt').value.trim();
             if (!prompt) {
-                showToast('请先输入提示词再使用智能尺寸', 'warning');
                 setImageGenSize(1024, 1024);
                 const hint = document.getElementById('imageGenSizeHint');
                 hint.style.display = 'block';
@@ -8520,6 +8466,12 @@ ${keywordsList}
             hint.textContent = result.hint
                 ? `💡 识别到: ${result.hint} → ${result.width}×${result.height}`
                 : `使用默认 ${result.width}×${result.height}`;
+        }
+
+        function selectSmartSize(btn) {
+            document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applySmartSize();
         }
 
         function parseSmartSize(text, maxRes = 2048) {
@@ -8633,17 +8585,7 @@ ${keywordsList}
             // 如果智能模式激活，先解析尺寸
             const smartBtn = document.querySelector('#imageGenRatioRow .smart-btn.active');
             if (smartBtn) {
-                const rawModelPre = document.getElementById('imageGenModel')?.value || '';
-                const { modelId: midPre } = parseModelValue(rawModelPre);
-                const maxResPre = getModelMaxResolution(midPre);
-                const result = parseSmartSize(prompt, maxResPre);
-                console.log('[ImageGen] 智能尺寸解析:', JSON.stringify(result), '提示词:', prompt, '模型最大:', maxResPre);
-                setImageGenSize(result.width, result.height);
-                const hint = document.getElementById('imageGenSizeHint');
-                hint.style.display = 'block';
-                hint.textContent = result.hint
-                    ? `💡 识别到: ${result.hint} → ${result.width}×${result.height}`
-                    : `⚠️ 未识别比例，使用默认 ${result.width}×${result.height}`;
+                applySmartSize();
             }
 
             let width = parseInt(document.getElementById('imageGenWidth').value) || 1024;
@@ -8666,7 +8608,6 @@ ${keywordsList}
 
             const provider = IMAGE_GEN_PROVIDERS[providerKey];
             const providerName = provider ? provider.name : providerKey;
-            console.log(`[ImageGen] Provider: ${providerName}, Model: ${modelId}, Size: ${width}×${height}, 画质: ${qualityLevel}`, qualityOpts || '默认');
 
             // 更新 loading 文字
             const loadingTitle = loading.querySelector('p');
