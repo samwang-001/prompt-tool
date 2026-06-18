@@ -8474,6 +8474,12 @@ ${keywordsList}
         // 获取模型支持的最大分辨率（用于智能尺寸解析）
         function getModelMaxResolution(modelId) {
             const id = (modelId || '').toLowerCase();
+            // Pollinations 新模型
+            if (id === 'flux' || id === 'zimage' || id === 'klein') return 1440;
+            if (id === 'seedream' || id === 'qwen-image' || id === 'grok-imagine') return 2048;
+            if (id.includes('ideogram')) return 2048;
+            if (id.includes('nanobanana')) return 1024;
+            // Puter.js 模型
             if (id.startsWith('gemini-') || id.includes('imagen')) return 4096;
             if (id.includes('flux-1.1-pro')) return 2048;
             if (id.includes('flux-schnell')) return 1440;
