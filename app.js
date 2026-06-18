@@ -8091,6 +8091,62 @@ ${keywordsList}
             console.warn(`[Quota] 模型 ${modelId} 额度已耗尽：${message || '免费额度已用完'}`);
         }
 
+        /**
+         * 用 Canvas 将图片强制重绘到目标尺寸（contain 模式，居中，深色背景）
+         * 这是最稳定的防变形方案：无论 API 返回什么尺寸，最终输出绝对匹配请求尺寸
+         * @param {string} src - 原始 base64
+         * @param {number} targetW - 目标宽度
+         * @param {number} targetH - 目标高度
+         * @returns {Promise<string|null>} 处理后的 base64，失败则返回 null（回退到原图）
+         */
+        function resizeImageToTarget(src, targetW, targetH) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = targetW;
+                        canvas.height = targetH;
+                        const ctx = canvas.getContext('2d');
+
+                        // 深色背景填充（匹配主题）
+                        ctx.fillStyle = '#0d1117';
+                        ctx.fillRect(0, 0, targetW, targetH);
+
+                        // contain 模式：按比例缩放，居中绘制，不出裁剪
+                        const srcRatio = img.naturalWidth / img.naturalHeight;
+                        const tgtRatio = targetW / targetH;
+                        let dw, dh, dx, dy;
+
+                        if (srcRatio > tgtRatio) {
+                            // 原图更宽 → 宽度撑满，上下留黑边
+                            dw = targetW;
+                            dh = Math.round(targetW / srcRatio);
+                            dx = 0;
+                            dy = Math.round((targetH - dh) / 2);
+                        } else {
+                            // 原图更高 → 高度撑满，左右留黑边
+                            dh = targetH;
+                            dw = Math.round(targetH * srcRatio);
+                            dx = Math.round((targetW - dw) / 2);
+                            dy = 0;
+                        }
+
+                        ctx.drawImage(img, dx, dy, dw, dh);
+                        resolve(canvas.toDataURL('image/png'));
+                    } catch (canvasErr) {
+                        console.warn('[CanvasResize] 绘制失败，回退原图:', canvasErr);
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => {
+                    console.warn('[CanvasResize] 图片加载失败，回退原图');
+                    resolve(null);
+                };
+                img.src = src;
+            });
+        }
+
         const IMAGE_GEN_PROVIDERS = {
             pollinations: {
                 name: 'Pollinations',
@@ -8716,6 +8772,21 @@ ${keywordsList}
                     actualHeight = actualDims.h;
                 } catch (dimErr) {
                     console.warn('[ImageGen] 无法读取图片实际尺寸，使用请求尺寸:', dimErr);
+                }
+
+                // ★ Canvas 后处理：如果 API 返回的尺寸与请求不符，强制重绘到目标尺寸
+                // 这是最稳定的防变形方案 —— 无论 API 是否忽略尺寸参数，最终输出绝对匹配
+                if (actualWidth !== width || actualHeight !== height) {
+                    console.log(`[ImageGen] 尺寸不匹配，Canvas 重绘: ${actualWidth}×${actualHeight} → ${width}×${height}`);
+                    const resized = await resizeImageToTarget(base64, width, height);
+                    if (resized) {
+                        base64 = resized;
+                        actualWidth = width;
+                        actualHeight = height;
+                        console.log('[ImageGen] Canvas 重绘完成，输出尺寸已修正');
+                    } else {
+                        console.warn('[ImageGen] Canvas 重绘失败，保留原图');
+                    }
                 }
 
                 const ratioMismatch = (
