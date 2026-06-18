@@ -8096,35 +8096,6 @@ ${keywordsList}
                 icon: '📡',
                 base: 'pollinations',
                 async generate(prompt, modelId, width, height, seed) {
-                    // Pollinations 标准尺寸映射（避免内部缩放导致拉伸）
-                    const STANDARD_SIZES = [
-                        { w: 1024, h: 1024 }, // 1:1
-                        { w: 1280, h: 720 },  // 16:9
-                        { w: 720, h: 1280 },  // 9:16
-                        { w: 768, h: 1024 },  // 3:4
-                        { w: 1024, h: 768 },  // 4:3
-                    ];
-                    
-                    // 查找最接近的标准尺寸
-                    let bestSize = { w: width, h: height };
-                    let minDiff = Infinity;
-                    
-                    for (const size of STANDARD_SIZES) {
-                        const ratioDiff = Math.abs((size.w / size.h) - (width / height));
-                        if (ratioDiff < minDiff) {
-                            minDiff = ratioDiff;
-                            bestSize = size;
-                        }
-                    }
-                    
-                    // 如果比例差异小于 5%，使用标准尺寸
-                    if (minDiff < 0.05 && (bestSize.w !== width || bestSize.h !== height)) {
-                        console.log(`[ImageGen:Pollinations] ⚠️ 检测到非标准尺寸，调整为: ${bestSize.w}×${bestSize.h}`);
-                        width = bestSize.w;
-                        height = bestSize.h;
-                    }
-                    
-                    // 计算期望的比例
                     const expectedRatio = computeRatio(width, height);
                     console.log(`[ImageGen:Pollinations] 请求参数:`);
                     console.log(`  - 模型: ${modelId}`);
