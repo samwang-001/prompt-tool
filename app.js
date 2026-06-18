@@ -8002,6 +8002,7 @@ ${keywordsList}
         const IMAGE_GEN_HISTORY_KEY = 'prompt_tool_image_gen_history';
         let imageGenHistory = [];
         let _isImageGenRunning = false;
+        let _imageGenRetried = false;
 
         // Provider & Model 定义
         // 辅助：宽高 → 最简比例
@@ -8246,6 +8247,13 @@ ${keywordsList}
                         }
                         if (msg.includes('rate') || msg.includes('too many')) {
                             return new Error(`[限流] ${mid} 请求太频繁，请稍后重试`);
+                        }
+                        // 模型不可用 (400 Invalid model / does not exist)
+                        if (msg.includes('Unable to access model') || msg.includes('model not found') ||
+                            msg.includes('does not exist') || msg.includes('not supported') ||
+                            msg.includes('invalid model') || msg.includes('Unsupported model')) {
+                            markModelExhausted(mid, '模型已下线');
+                            return new Error(`[模型] ${mid} 已下线或不可用，已自动标记，请换其他模型`);
                         }
                         return new Error(`[模型] ${mid}: ${msg}`);
                     };
@@ -8752,7 +8760,30 @@ ${keywordsList}
                 showToast(`✓ ${providerName}:${modelId} 生成成功`, 'success');
             } catch (e) {
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
-                let msg = e.message;
+                let msg = e.message || String(e);
+
+                // 模型层级错误 — 自动切换并重试一次
+                const isModelError = msg.startsWith('[模型]') || msg.startsWith('[额度]');
+                if (isModelError && !_imageGenRetried) {
+                    _imageGenRetried = true;
+                    showToast(`🔄 ${providerName}:${modelId} 失败，自动切换模型重试...`, 'warning');
+                    autoSwitchToAvailableModel();
+                    // 短暂延迟后重试
+                    await new Promise(r => setTimeout(r, 1000));
+                    try {
+                        _isImageGenRunning = false;
+                        btn.disabled = false;
+                        btn.textContent = '🎨 生成图片';
+                        loading.style.display = 'none';
+                        await doImageGen();
+                        _imageGenRetried = false;
+                        return;
+                    } catch (retryErr) {
+                        msg = retryErr.message || String(retryErr);
+                    }
+                    _imageGenRetried = false;
+                }
+
                 // 统一前缀分类
                 if (msg.startsWith('[认证]')) {
                     msg = '🔑 ' + msg.replace('[认证]', '需要登录: ') + ' — Puter 提供免费 AI，登录后即可使用';
