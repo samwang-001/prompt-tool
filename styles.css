@@ -4121,10 +4121,7 @@
             transform: translateY(-2px);
         }
         .image-gen-item-img {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 200px;
+            display: block;
             background: linear-gradient(135deg, #0a0f1a 0%, #111827 100%);
             cursor: pointer;
             overflow: hidden;
@@ -4150,9 +4147,7 @@
         }
         .image-gen-item-img img {
             display: block;
-            max-width: 100%;
-            max-height: 600px;
-            width: auto;
+            width: 100%;
             height: auto;
             transition: transform 0.35s ease;
         }
