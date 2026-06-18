@@ -8709,11 +8709,32 @@ ${keywordsList}
 
                 let base64 = await provider.generate(prompt, modelId, width, height, seed, qualityOpts);
 
+                // 从 base64 提取实际图片尺寸
+                let actualWidth = width;
+                let actualHeight = height;
+                try {
+                    const actualDims = await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+                        img.onerror = () => reject(new Error('无法加载'));
+                        img.src = base64;
+                    });
+                    actualWidth = actualDims.w;
+                    actualHeight = actualDims.h;
+                } catch (dimErr) {
+                    console.warn('[ImageGen] 无法读取图片实际尺寸，使用请求尺寸:', dimErr);
+                }
+
+                const ratioMismatch = (
+                    computeRatio(actualWidth, actualHeight).w !== computeRatio(width, height).w ||
+                    computeRatio(actualWidth, actualHeight).h !== computeRatio(width, height).h
+                );
+
                 const item = {
                     id: Date.now(),
                     prompt,
-                    width,
-                    height,
+                    width: actualWidth,
+                    height: actualHeight,
                     model: rawModel,
                     provider: providerKey,
                     modelId,
@@ -8730,7 +8751,12 @@ ${keywordsList}
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
                 loading.style.display = 'none';
-                showToast(`✓ ${providerName}:${modelId} 生成成功`, 'success');
+
+                if (ratioMismatch) {
+                    showToast(`⚠️ ${providerName}:${modelId} 生成完成，但实际尺寸为 ${actualWidth}×${actualHeight}（请求 ${width}×${height}），API 忽略了尺寸参数`, 'warning');
+                } else {
+                    showToast(`✓ ${providerName}:${modelId} 生成成功`, 'success');
+                }
             } catch (e) {
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
                 let msg = e.message || String(e);
