@@ -8194,13 +8194,14 @@ ${keywordsList}
                     };
                     const _doGenerate = async (extraOpts) => {
                         // Puter.js API 参数策略：
-                        // 1. 传递 width/height 确保尺寸精准
-                        // 2. 同时传递 ratio 字符串确保比例正确
-                        const options = { model: modelId, width, height };
+                        // GPT/DALL-E 系列只支持 ratio（传入简化比例字符串）；其他模型用 width/height
+                        const options = { model: modelId };
                         
-                        // 对于 GPT Image 系列，使用 ratio 字符串
                         if (modelId.includes('gpt-image') || modelId.includes('dall-e')) {
                             options.ratio = ratioStr;
+                        } else {
+                            options.width = width;
+                            options.height = height;
                         }
                         
                         if (seed != null) options.seed = seed;
@@ -8727,6 +8728,8 @@ ${keywordsList}
                     prompt,
                     width: actualWidth,
                     height: actualHeight,
+                    reqWidth: width,
+                    reqHeight: height,
                     model: rawModel,
                     provider: providerKey,
                     modelId,
@@ -8745,7 +8748,7 @@ ${keywordsList}
                 loading.style.display = 'none';
 
                 if (ratioMismatch) {
-                    showToast(`⚠️ ${providerName}:${modelId} 生成完成，但实际尺寸为 ${actualWidth}×${actualHeight}（请求 ${width}×${height}），API 忽略了尺寸参数`, 'warning');
+                    showToast(`⚠️ 尺寸不匹配：请求 ${width}×${height}，实际 ${actualWidth}×${actualHeight}（${providerName}:${modelId} 忽略了尺寸参数）`, 'warning', 6000);
                 } else {
                     showToast(`✓ ${providerName}:${modelId} 生成成功`, 'success');
                 }
@@ -8828,7 +8831,9 @@ ${keywordsList}
                             <div class="image-gen-item-info">
                                 <div class="image-gen-item-prompt" title="${escapeHtml(item.prompt)}">${escapeHtml(item.prompt.substring(0, 60))}${item.prompt.length > 60 ? '...' : ''}</div>
                                 <div class="image-gen-item-meta">
-                                    <span>${item.width}×${item.height}</span>
+                                    ${item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height)
+                                        ? `<span style="color:#ef4444;font-weight:600;" title="请求 ${item.reqWidth}×${item.reqHeight}">⚠ ${item.reqWidth}×${item.reqHeight} → ${item.width}×${item.height}</span>`
+                                        : `<span>${item.width}×${item.height}</span>`}
                                     <span>${formatModelDisplay(item.model || '', item.modelId || '')}</span>
                                     <span>seed:${item.seed}</span>
                                     ${item.quality ? `<span class="quality-badge" style="color:${item.quality==='high'?'#f59e0b':item.quality==='standard'?'#60a5fa':'#9ca3af'}">${item.quality==='high'?'💎':item.quality==='standard'?'🎯':'⚡'}</span>` : ''}
@@ -8857,7 +8862,7 @@ ${keywordsList}
                     <img src="${item.base64}" alt="${escapeHtml(item.prompt)}">
                     <div class="image-gen-preview-info">
                         <p>${escapeHtml(item.prompt)}</p>
-                        <small>${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}${item.quality ? ` · ${item.quality==='high'?'💎 高品质':item.quality==='standard'?'🎯 标准':'⚡ 快速'}` : ''}</small>
+                        <small>${item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height) ? `<span style="color:#fca5a5;">⚠ 请求 ${item.reqWidth}×${item.reqHeight} → 实际 </span>` : ''}${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}${item.quality ? ` · ${item.quality==='high'?'💎 高品质':item.quality==='standard'?'🎯 标准':'⚡ 快速'}` : ''}</small>
                         <div style="margin-top:0.65rem;display:flex;gap:0.5rem;justify-content:center;">
                             <button class="btn btn-ghost btn-sm" onclick="downloadImageGenItem(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">⬇ 下载</button>
                             <button class="btn btn-ghost btn-sm" onclick="copyImageGenPrompt(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">📋 复制提示词</button>
