@@ -8549,8 +8549,14 @@ ${keywordsList}
                 w = parseInt(exactMatch[1]);
                 h = parseInt(exactMatch[2]);
                 hint = `${w}×${h}`;
-                w = Math.max(256, Math.min(maxRes, w));
-                h = Math.max(256, Math.min(maxRes, h));
+                // 按比例缩放以适配模型最大分辨率
+                if (w > maxRes || h > maxRes) {
+                    const r = w / h;
+                    if (w >= h) { w = Math.min(maxRes, w); h = Math.round(w / r); }
+                    else { h = Math.min(maxRes, h); w = Math.round(h * r); }
+                }
+                w = Math.max(256, w);
+                h = Math.max(256, h);
                 return { width: w, height: h, hint };
             }
 
@@ -8626,9 +8632,19 @@ ${keywordsList}
                 hint = '';
             }
 
-            // Clamp
-            w = Math.max(256, Math.min(maxRes, w));
-            h = Math.max(256, Math.min(maxRes, h));
+            // 按比例缩放到不超过最大分辨率（保持宽高比）
+            if (w > maxRes || h > maxRes) {
+                const r = w / h;
+                if (w >= h) {
+                    w = Math.min(maxRes, w);
+                    h = Math.round(w / r);
+                } else {
+                    h = Math.min(maxRes, h);
+                    w = Math.round(h * r);
+                }
+            }
+            w = Math.max(256, w);
+            h = Math.max(256, h);
 
             return { width: w, height: h, hint };
         }
@@ -8665,10 +8681,21 @@ ${keywordsList}
             let height = parseInt(document.getElementById('imageGenHeight').value) || 1024;
             const rawModel = document.getElementById('imageGenModel').value;
             const { provider: providerKey, modelId } = parseModelValue(rawModel);
-            // 根据模型能力限制最大分辨率
+            // 根据模型能力限制最大分辨率（保持宽高比）
             const maxRes = getModelMaxResolution(modelId);
-            width = Math.max(256, Math.min(maxRes, width));
-            height = Math.max(256, Math.min(maxRes, height));
+            if (width > maxRes || height > maxRes) {
+                const ratio = width / height;
+                if (width >= height) {
+                    width = Math.min(maxRes, width);
+                    height = Math.round(width / ratio);
+                } else {
+                    height = Math.min(maxRes, height);
+                    width = Math.round(height * ratio);
+                }
+                // 确保不低于最小值
+                width = Math.max(256, width);
+                height = Math.max(256, height);
+            }
             // 同步回隐藏字段
             document.getElementById('imageGenWidth').value = width;
             document.getElementById('imageGenHeight').value = height;
