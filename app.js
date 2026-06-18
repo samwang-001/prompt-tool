@@ -8109,13 +8109,18 @@ ${keywordsList}
                         { w: 1024, h: 768 },  // 4:3
                     ];
                     
-                    // 查找最接近的标准尺寸
+                    // 查找最接近的标准尺寸（比例优先，比例相同时选像素数更接近的）
                     let bestSize = { w: width, h: height };
                     let minDiff = Infinity;
+                    const requestedPixels = width * height;
                     
                     for (const size of STANDARD_SIZES) {
                         const ratioDiff = Math.abs((size.w / size.h) - (width / height));
-                        if (ratioDiff < minDiff) {
+                        const sizePixels = size.w * size.h;
+                        // 比例差异更小，或比例相同但像素数更接近，则选用
+                        if (ratioDiff < minDiff - 0.0001 ||
+                            (Math.abs(ratioDiff - minDiff) < 0.0001 &&
+                             Math.abs(sizePixels - requestedPixels) < Math.abs(bestSize.w * bestSize.h - requestedPixels))) {
                             minDiff = ratioDiff;
                             bestSize = size;
                         }
