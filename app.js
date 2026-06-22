@@ -8173,13 +8173,15 @@ ${keywordsList}
                 async generate(prompt, modelId, width, height, seed) {
                     const expectedRatio = computeRatio(width, height);
 
+                    // 通过本地服务器代理请求，绕过浏览器 Origin 头被 403 的问题
                     const params = new URLSearchParams({
+                        prompt: prompt,
                         width: String(width),
                         height: String(height),
                         seed: String(seed),
                         model: modelId
                     });
-                    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
+                    const url = `/api/pollinations?${params.toString()}`;
 
                     let resp;
                     let lastNetErr;

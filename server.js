@@ -145,6 +145,58 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // 代理：/api/pollinations -> Pollinations API (绕过浏览器 Origin 头 403)
+  if (parsed.pathname === '/api/pollinations') {
+    const q = parsed.query;
+    const prompt = q.prompt || '';
+    const width = q.width || '1024';
+    const height = q.height || '1024';
+    const seed = q.seed || '42';
+    const model = q.model || 'flux';
+
+    if (!prompt) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: '缺少 prompt 参数' }));
+      return;
+    }
+
+    const upstreamUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
+    console.log(`[Pollinations] 代理请求: ${model} ${width}×${height}`);
+
+    const proxyReq = https.get(upstreamUrl, { timeout: PROXY_TIMEOUT * 2 }, (proxyRes) => {
+      if (proxyRes.statusCode >= 400) {
+        res.writeHead(proxyRes.statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Pollinations 返回 ${proxyRes.statusCode}` }));
+        return;
+      }
+      // 透传图片内容类型
+      const ct = proxyRes.headers['content-type'] || 'image/jpeg';
+      res.writeHead(200, {
+        'Content-Type': ct,
+        'Cache-Control': 'no-store',
+      });
+      proxyRes.pipe(res);
+    });
+
+    proxyReq.on('timeout', () => {
+      proxyReq.destroy();
+      if (!res.headersSent) {
+        res.writeHead(504, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Pollinations 请求超时' }));
+      }
+    });
+
+    proxyReq.on('error', (err) => {
+      console.error('[Pollinations] 代理错误:', err.message);
+      if (!res.headersSent) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Pollinations 服务不可达' }));
+      }
+    });
+
+    return;
+  }
+
   // 静态文件服务
   let filePath = parsed.pathname === '/' ? '/index.html' : parsed.pathname;
 
