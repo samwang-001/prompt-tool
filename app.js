@@ -8021,6 +8021,15 @@ ${keywordsList}
             return { w: Math.round(w / d), h: Math.round(h / d) };
         }
 
+        // 检查两个尺寸的宽高比是否一致（容忍 ±5% 偏差）
+        function ratioMatches(w1, h1, w2, h2) {
+            const r1 = w1 / h1;
+            const r2 = w2 / h2;
+            if (r1 === 0 || r2 === 0 || !isFinite(r1) || !isFinite(r2)) return false;
+            const diff = Math.abs(r1 - r2) / Math.max(r1, r2);
+            return diff < 0.05;
+        }
+
         // 判断模型是否支持精确宽高（而非仅比例）
         // gpt-image-* / dall-e-* 只接受 ratio，不接受 width×height
         function modelSupportsExactSize(modelId) {
@@ -8166,8 +8175,6 @@ ${keywordsList}
                 icon: '📡',
                 base: 'pollinations',
                 async generate(prompt, modelId, width, height, seed) {
-                    const expectedRatio = computeRatio(width, height);
-
                     // 通过本地服务器代理请求，绕过浏览器 Origin 头被 403 的问题
                     const params = new URLSearchParams({
                         prompt: prompt,
@@ -8782,9 +8789,9 @@ ${keywordsList}
                     throw new Error(`未知的生成引擎: ${providerKey}`);
                 }
 
-                const base64 = await provider.generate(prompt, modelId, width, height, seed, qualityOpts);
+                let rawBase64 = await provider.generate(prompt, modelId, width, height, seed, qualityOpts);
 
-                // 记录实际图片尺寸（仅用于历史记录展示）
+                // 读取 API 返回的实际尺寸
                 let actualWidth = width;
                 let actualHeight = height;
                 try {
@@ -8792,12 +8799,22 @@ ${keywordsList}
                         const img = new Image();
                         img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
                         img.onerror = () => reject(new Error('无法加载'));
-                        img.src = base64;
+                        img.src = rawBase64;
                     });
                     actualWidth = actualDims.w;
                     actualHeight = actualDims.h;
                 } catch (dimErr) {
                     console.warn('[ImageGen] 无法读取图片实际尺寸:', dimErr);
+                }
+
+                // 比例校验：如果 API 返回的宽高比和请求不一致，说明图像真正变形了
+                const ratioOk = ratioMatches(width, height, actualWidth, actualHeight);
+                let ratioWarning = '';
+                if (!ratioOk) {
+                    const reqR = computeRatio(width, height);
+                    const realR = computeRatio(actualWidth, actualHeight);
+                    ratioWarning = `⚠️ 比例漂移: 请求${reqR.w}:${reqR.h} → 实际${actualWidth}×${actualHeight}(${realR.w}:${realR.h})`;
+                    console.warn('[ImageGen]', ratioWarning);
                 }
 
                 const item = {
@@ -8807,12 +8824,13 @@ ${keywordsList}
                     height: actualHeight,
                     reqWidth: width,
                     reqHeight: height,
+                    ratioOk,
                     model: rawModel,
                     provider: providerKey,
                     modelId,
                     quality: qualityLevel,
                     seed,
-                    base64,
+                    base64: rawBase64,
                     time: new Date().toISOString()
                 };
                 try { await saveImageGenToHistory(item); } catch (saveErr) {
@@ -8823,7 +8841,10 @@ ${keywordsList}
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
                 loading.style.display = 'none';
-                showToast(`✓ ${providerName}:${modelId} 生成成功`, 'success');
+                const dimsNote = (actualWidth !== width || actualHeight !== height)
+                    ? ` (实际${actualWidth}×${actualHeight})`
+                    : '';
+                showToast(`✓ ${providerName}:${modelId} 生成成功${dimsNote}${ratioWarning ? ' ' + ratioWarning : ''}`, ratioOk ? 'success' : 'warning');
             } catch (e) {
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
                 let msg = e.message || String(e);
@@ -8903,9 +8924,11 @@ ${keywordsList}
                             <div class="image-gen-item-info">
                                 <div class="image-gen-item-prompt" title="${escapeHtml(item.prompt)}">${escapeHtml(item.prompt.substring(0, 60))}${item.prompt.length > 60 ? '...' : ''}</div>
                                 <div class="image-gen-item-meta">
-                                    ${item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height)
-                                        ? `<span style="color:#ef4444;font-weight:600;" title="请求 ${item.reqWidth}×${item.reqHeight}">⚠ ${item.reqWidth}×${item.reqHeight} → ${item.width}×${item.height}</span>`
-                                        : `<span>${item.width}×${item.height}</span>`}
+                                    ${item.reqWidth && item.reqHeight && item.ratioOk === false
+                                        ? `<span style="color:#ef4444;font-weight:600;" title="请求 ${item.reqWidth}×${item.reqHeight}，比例不匹配">⚠ 比例漂移: ${item.reqWidth}×${item.reqHeight} → ${item.width}×${item.height}</span>`
+                                        : item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height)
+                                            ? `<span style="color:#22c55e;" title="请求 ${item.reqWidth}×${item.reqHeight}，比例正确">✓ ${item.width}×${item.height}</span>`
+                                            : `<span>${item.width}×${item.height}</span>`}
                                     <span>${formatModelDisplay(item.model || '', item.modelId || '')}</span>
                                     <span>seed:${item.seed}</span>
                                     ${item.quality ? `<span class="quality-badge" style="color:${item.quality==='high'?'#f59e0b':item.quality==='standard'?'#60a5fa':'#9ca3af'}">${item.quality==='high'?'💎':item.quality==='standard'?'🎯':'⚡'}</span>` : ''}
@@ -8934,7 +8957,7 @@ ${keywordsList}
                     <img src="${item.base64}" alt="${escapeHtml(item.prompt)}">
                     <div class="image-gen-preview-info">
                         <p>${escapeHtml(item.prompt)}</p>
-                        <small>${item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height) ? `<span style="color:#fca5a5;">⚠ 请求 ${item.reqWidth}×${item.reqHeight} → 实际 </span>` : ''}${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}${item.quality ? ` · ${item.quality==='high'?'💎 高品质':item.quality==='standard'?'🎯 标准':'⚡ 快速'}` : ''}</small>
+                        <small>${item.reqWidth && item.reqHeight && item.ratioOk === false ? `<span style="color:#fca5a5;">⚠ 比例漂移: 请求 ${item.reqWidth}×${item.reqHeight} → 实际 </span>` : item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height) ? `<span style="color:#86efac;">✓ 请求 ${item.reqWidth}×${item.reqHeight} → 实际 </span>` : ''}${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}${item.quality ? ` · ${item.quality==='high'?'💎 高品质':item.quality==='standard'?'🎯 标准':'⚡ 快速'}` : ''}</small>
                         <div style="margin-top:0.65rem;display:flex;gap:0.5rem;justify-content:center;">
                             <button class="btn btn-ghost btn-sm" onclick="downloadImageGenItem(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">⬇ 下载</button>
                             <button class="btn btn-ghost btn-sm" onclick="copyImageGenPrompt(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">📋 复制提示词</button>
