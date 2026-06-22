@@ -6617,6 +6617,9 @@ ${sampleStr}
             // 自动切换到可用的模型（避免默认选中已耗尽的模型）
             autoSwitchToAvailableModel();
 
+            // 初始化尺寸控件状态（根据当前选中模型决定显示比例还是宽高）
+            onModelChange();
+
             // 预加载图片生成历史到 IndexedDB，确保切换视图时立即可用
             try { await loadImageGenHistory(); } catch (e) { console.warn('[Init] 图片生成历史预加载失败:', e); }
             if (currentView === 'image-gen') renderImageGenResults();
@@ -6733,12 +6736,17 @@ ${sampleStr}
                 renderImageGenResults();
                 // 初始化画质提示
                 onQualityChange();
-                // 绑定模型切换时更新画质提示
+                // 绑定模型切换：更新画质提示 + 尺寸控件
                 const modelSel = document.getElementById('imageGenModel');
-                if (modelSel && !modelSel._qualityBound) {
-                    modelSel._qualityBound = true;
-                    modelSel.addEventListener('change', onQualityChange);
+                if (modelSel && !modelSel._modelBound) {
+                    modelSel._modelBound = true;
+                    modelSel.addEventListener('change', () => {
+                        onQualityChange();
+                        onModelChange();
+                    });
                 }
+                // 初始调用一次，设置当前模型对应的控件状态
+                onModelChange();
             }
         }
 
@@ -8013,6 +8021,45 @@ ${keywordsList}
             return { w: Math.round(w / d), h: Math.round(h / d) };
         }
 
+        // 判断模型是否支持精确宽高（而非仅比例）
+        // gpt-image-* / dall-e-* 只接受 ratio，不接受 width×height
+        function modelSupportsExactSize(modelId) {
+            const id = (modelId || '').toLowerCase();
+            return !(id.startsWith('gpt-image') || id.includes('dall-e'));
+        }
+
+        // 模型切换时更新尺寸控件的可用状态
+        function onModelChange() {
+            const rawModel = document.getElementById('imageGenModel').value;
+            const { modelId } = parseModelValue(rawModel);
+            const supportsExact = modelSupportsExactSize(modelId);
+            const customRow = document.getElementById('imageGenCustomRow');
+            const ratioRow = document.getElementById('imageGenRatioRow');
+            const sizeLabel = document.getElementById('imageGenSizeLabel');
+            const sizeHint = document.getElementById('imageGenSizeHint');
+
+            if (!supportsExact) {
+                // 仅支持比例的模型：隐藏自定义尺寸，只显示比例按钮
+                customRow.style.display = 'none';
+                ratioRow.style.display = 'flex';
+                sizeHint.style.display = 'block';
+                sizeHint.textContent = '💡 此模型仅支持比例，实际尺寸由 API 决定';
+                // 更新标签为比例格式
+                const w = parseInt(document.getElementById('imageGenWidth').value) || 1024;
+                const h = parseInt(document.getElementById('imageGenHeight').value) || 1024;
+                const r = computeRatio(w, h);
+                sizeLabel.textContent = `${r.w}:${r.h}`;
+            } else {
+                // 支持精确尺寸的模型：全部可用
+                customRow.style.display = 'flex';
+                ratioRow.style.display = 'flex';
+                sizeHint.style.display = 'none';
+                const w = parseInt(document.getElementById('imageGenWidth').value) || 1024;
+                const h = parseInt(document.getElementById('imageGenHeight').value) || 1024;
+                sizeLabel.textContent = `${w}×${h}`;
+            }
+        }
+
 
         // 模型额度管理
         const MODEL_QUOTA_STATUS = {
@@ -8109,69 +8156,9 @@ ${keywordsList}
             console.warn(`[Quota] 模型 ${modelId} 额度已耗尽：${message || '免费额度已用完'}`);
         }
 
-        /**
-         * 用 Canvas 将图片强制重绘到目标尺寸
-         * 智能策略：比例接近时填充 → 偏差大时 cover 裁剪（避免 contain 的大黑边）
-         * @param {string} src - 原始 base64
-         * @param {number} targetW - 目标宽度
-         * @param {number} targetH - 目标高度
-         * @returns {Promise<string|null>} 处理后的 base64，失败则返回 null（回退到原图）
-         */
-        function resizeImageToTarget(src, targetW, targetH) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => {
-                    try {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = targetW;
-                        canvas.height = targetH;
-                        const ctx = canvas.getContext('2d');
-
-                        // 深色背景填充（匹配主题，作为回退色）
-                        ctx.fillStyle = '#0d1117';
-                        ctx.fillRect(0, 0, targetW, targetH);
-
-                        const srcRatio = img.naturalWidth / img.naturalHeight;
-                        const tgtRatio = targetW / targetH;
-                        const ratioDiff = Math.abs(srcRatio - tgtRatio) / tgtRatio;
-                        let dw, dh, dx, dy;
-
-                        // 策略：比例偏差 < 5% → 直接填充（微小拉伸看不出）
-                        //       偏差大 → cover 模式（裁剪填充，不留黑边）
-                        if (ratioDiff < 0.05) {
-                            // 填满整个画布（微小比例差异可忽略）
-                            dw = targetW;
-                            dh = targetH;
-                            dx = 0;
-                            dy = 0;
-                        } else if (srcRatio > tgtRatio) {
-                            // 原图更宽 → cover: 高度撑满，左右裁掉多余
-                            dh = targetH;
-                            dw = Math.round(targetH * srcRatio);
-                            dx = Math.round((targetW - dw) / 2);
-                            dy = 0;
-                        } else {
-                            // 原图更高 → cover: 宽度撑满，上下裁掉多余
-                            dw = targetW;
-                            dh = Math.round(targetW / srcRatio);
-                            dx = 0;
-                            dy = Math.round((targetH - dh) / 2);
-                        }
-
-                        ctx.drawImage(img, dx, dy, dw, dh);
-                        resolve(canvas.toDataURL('image/png'));
-                    } catch (canvasErr) {
-                        console.warn('[CanvasResize] 绘制失败，回退原图:', canvasErr);
-                        resolve(null);
-                    }
-                };
-                img.onerror = () => {
-                    console.warn('[CanvasResize] 图片加载失败，回退原图');
-                    resolve(null);
-                };
-                img.src = src;
-            });
-        }
+        // 注意：不再对生成后的图片做 Canvas 重绘/裁剪。
+        // 图片尺寸应完全由模型在生成时决定——支持的传宽高，只支持比例的传比例。
+        // 任何后处理都会导致拉伸变形或错误裁剪。
 
         const IMAGE_GEN_PROVIDERS = {
             pollinations: {
@@ -8428,11 +8415,19 @@ ${keywordsList}
             }
         }
 
-        // 更新尺寸标签和隐藏字段
+        // 更新尺寸标签和隐藏字段（根据模型类型显示比例或像素）
         function setImageGenSize(w, h) {
             document.getElementById('imageGenWidth').value = w;
             document.getElementById('imageGenHeight').value = h;
-            document.getElementById('imageGenSizeLabel').textContent = `${w}×${h}`;
+            const rawModel = document.getElementById('imageGenModel').value;
+            const { modelId } = parseModelValue(rawModel);
+            const label = document.getElementById('imageGenSizeLabel');
+            if (modelSupportsExactSize(modelId)) {
+                label.textContent = `${w}×${h}`;
+            } else {
+                const r = computeRatio(w, h);
+                label.textContent = `${r.w}:${r.h}`;
+            }
         }
 
         // ==================== 自定义尺寸 & 常用预设 ====================
@@ -8787,9 +8782,9 @@ ${keywordsList}
                     throw new Error(`未知的生成引擎: ${providerKey}`);
                 }
 
-                let base64 = await provider.generate(prompt, modelId, width, height, seed, qualityOpts);
+                const base64 = await provider.generate(prompt, modelId, width, height, seed, qualityOpts);
 
-                // 从 base64 提取实际图片尺寸
+                // 记录实际图片尺寸（仅用于历史记录展示）
                 let actualWidth = width;
                 let actualHeight = height;
                 try {
@@ -8802,28 +8797,8 @@ ${keywordsList}
                     actualWidth = actualDims.w;
                     actualHeight = actualDims.h;
                 } catch (dimErr) {
-                    console.warn('[ImageGen] 无法读取图片实际尺寸，使用请求尺寸:', dimErr);
+                    console.warn('[ImageGen] 无法读取图片实际尺寸:', dimErr);
                 }
-
-                // ★ Canvas 后处理：如果 API 返回的尺寸与请求不符，强制重绘到目标尺寸
-                // 这是最稳定的防变形方案 —— 无论 API 是否忽略尺寸参数，最终输出绝对匹配
-                if (actualWidth !== width || actualHeight !== height) {
-                    console.log(`[ImageGen] 尺寸不匹配，Canvas 重绘: ${actualWidth}×${actualHeight} → ${width}×${height}`);
-                    const resized = await resizeImageToTarget(base64, width, height);
-                    if (resized) {
-                        base64 = resized;
-                        actualWidth = width;
-                        actualHeight = height;
-                        console.log('[ImageGen] Canvas 重绘完成，输出尺寸已修正');
-                    } else {
-                        console.warn('[ImageGen] Canvas 重绘失败，保留原图');
-                    }
-                }
-
-                const ratioMismatch = (
-                    computeRatio(actualWidth, actualHeight).w !== computeRatio(width, height).w ||
-                    computeRatio(actualWidth, actualHeight).h !== computeRatio(width, height).h
-                );
 
                 const item = {
                     id: Date.now(),
@@ -8848,12 +8823,7 @@ ${keywordsList}
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
                 loading.style.display = 'none';
-
-                if (ratioMismatch) {
-                    showToast(`⚠️ 尺寸不匹配：请求 ${width}×${height}，实际 ${actualWidth}×${actualHeight}（${providerName}:${modelId} 忽略了尺寸参数）`, 'warning', 6000);
-                } else {
-                    showToast(`✓ ${providerName}:${modelId} 生成成功`, 'success');
-                }
+                showToast(`✓ ${providerName}:${modelId} 生成成功`, 'success');
             } catch (e) {
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
                 let msg = e.message || String(e);
