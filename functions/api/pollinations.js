@@ -14,8 +14,8 @@ export async function onRequest(context) {
   const params = url.searchParams;
 
   const prompt = params.get('prompt');
-  const width = params.get('width') || '1024';
-  const height = params.get('height') || '1024';
+  const width = params.get('width');
+  const height = params.get('height');
   const seed = params.get('seed') || '42';
   const model = params.get('model') || 'flux';
 
@@ -26,8 +26,14 @@ export async function onRequest(context) {
     });
   }
 
-  const upstreamUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
-  console.log(`[Pollinations] 发起请求: ${width}×${height} model=${model} seed=${seed}`);
+  // 构建上游 URL：width/height 可选，不传时让 Pollinations 自行决定原生尺寸
+  let upstreamUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&model=${model}`;
+  if (width && height) {
+    upstreamUrl += `&width=${width}&height=${height}`;
+    console.log(`[Pollinations] 发起请求: ${width}×${height} model=${model} seed=${seed}`);
+  } else {
+    console.log(`[Pollinations] 发起请求: model=${model} seed=${seed} (自动尺寸)`);
+  }
 
   try {
     const response = await fetch(upstreamUrl, {

@@ -149,8 +149,8 @@ const server = http.createServer((req, res) => {
   if (parsed.pathname === '/api/pollinations') {
     const q = parsed.query;
     const prompt = q.prompt || '';
-    const width = q.width || '1024';
-    const height = q.height || '1024';
+    const width = q.width;
+    const height = q.height;
     const seed = q.seed || '42';
     const model = q.model || 'flux';
 
@@ -160,8 +160,10 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    const upstreamUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
-    console.log(`[Pollinations] 代理请求: ${model} ${width}×${height} → ${upstreamUrl}`);
+    let upstreamUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&model=${model}`;
+    if (width && height) {
+      upstreamUrl += `&width=${width}&height=${height}`;
+    }
 
     const proxyReq = https.get(upstreamUrl, { timeout: PROXY_TIMEOUT * 2 }, (proxyRes) => {
       if (proxyRes.statusCode >= 400) {

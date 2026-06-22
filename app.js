@@ -8239,11 +8239,14 @@ ${keywordsList}
                     // 通过本地服务器代理请求，绕过浏览器 Origin 头被 403 的问题
                     const params = new URLSearchParams({
                         prompt: prompt,
-                        width: String(width),
-                        height: String(height),
                         seed: String(seed),
                         model: modelId
                     });
+                    // 只有当用户明确选了尺寸时才传 width/height，否则让 API 自己决定原生尺寸
+                    if (width > 0 && height > 0) {
+                        params.set('width', String(width));
+                        params.set('height', String(height));
+                    }
                     const url = `/api/pollinations?${params.toString()}`;
 
                     let resp;
@@ -8856,12 +8859,13 @@ ${keywordsList}
 
             const rawModel = document.getElementById('imageGenModel').value;
             const { provider: providerKey, modelId } = parseModelValue(rawModel);
-            const native = getModelNativeSize(modelId);
-            let width = parseInt(document.getElementById('imageGenWidth').value) || native.width;
-            let height = parseInt(document.getElementById('imageGenHeight').value) || native.height;
+            // 用户没手动选尺寸时，width/height=0，generate() 会跳过传尺寸参数
+            let width = parseInt(document.getElementById('imageGenWidth').value) || 0;
+            let height = parseInt(document.getElementById('imageGenHeight').value) || 0;
+            const userRequestedSize = width > 0 && height > 0;
             // 检查是否超过模型最大分辨率（仅警告，不做换算）
             const maxRes = getModelMaxResolution(modelId);
-            if (width > maxRes || height > maxRes) {
+            if (userRequestedSize && (width > maxRes || height > maxRes)) {
                 showToast(`⚠️ 尺寸 ${width}×${height} 超过模型 ${modelId} 最大支持 ${maxRes}px，API 可能报错或忽略`, 'warning');
             }
 
@@ -8906,31 +8910,38 @@ ${keywordsList}
                     console.warn('[ImageGen] 无法读取图片实际尺寸:', dimErr);
                 }
 
-                // 比例校验：如果 API 返回的宽高比和请求不一致，说明图像真正变形了
-                // 此时用 Canvas 居中裁剪到目标比例（不留黑边），这是针对 API 端缺陷的兜底修复
+                // 比例校验：只在用户明确请求了尺寸时才校验
+                // 如果用户没选尺寸，按 API 原生输出为准，不做任何校验和裁剪
                 let finalBase64 = rawBase64;
                 let finalWidth = actualWidth;
                 let finalHeight = actualHeight;
-                let ratioOk = ratioMatches(width, height, actualWidth, actualHeight);
+                let ratioOk = true;
                 let ratioWarning = '';
 
-                if (!ratioOk) {
-                    const reqR = computeRatio(width, height);
-                    const realR = computeRatio(actualWidth, actualHeight);
-                    ratioWarning = `⚠️ 比例漂移: 请求${reqR.w}:${reqR.h} → 实际${actualWidth}×${actualHeight}(${realR.w}:${realR.h})`;
-                    console.warn('[ImageGen]', ratioWarning, '→ 自动裁剪修复');
+                if (userRequestedSize) {
+                    ratioOk = ratioMatches(width, height, actualWidth, actualHeight);
+                    if (!ratioOk) {
+                        const reqR = computeRatio(width, height);
+                        const realR = computeRatio(actualWidth, actualHeight);
+                        ratioWarning = `⚠️ 比例漂移: 请求${reqR.w}:${reqR.h} → 实际${actualWidth}×${actualHeight}(${realR.w}:${realR.h})`;
+                        console.warn('[ImageGen]', ratioWarning, '→ 自动裁剪修复');
 
-                    try {
-                        const cropped = await coverCropToRatio(rawBase64, width, height);
-                        finalBase64 = cropped.base64;
-                        finalWidth = cropped.width;
-                        finalHeight = cropped.height;
-                        console.log(`[ImageGen] 裁剪修复完成: ${actualWidth}×${actualHeight} → ${finalWidth}×${finalHeight}, 比例已对齐`);
-                        ratioOk = true; // 修复后标记为正确
-                        ratioWarning += ' → 已居中裁剪修复';
-                    } catch (cropErr) {
-                        console.warn('[ImageGen] 裁剪修复失败，保留原始尺寸:', cropErr);
+                        try {
+                            const cropped = await coverCropToRatio(rawBase64, width, height);
+                            finalBase64 = cropped.base64;
+                            finalWidth = cropped.width;
+                            finalHeight = cropped.height;
+                            console.log(`[ImageGen] 裁剪修复完成: ${actualWidth}×${actualHeight} → ${finalWidth}×${finalHeight}, 比例已对齐`);
+                            ratioOk = true;
+                            ratioWarning += ' → 已居中裁剪修复';
+                        } catch (cropErr) {
+                            console.warn('[ImageGen] 裁剪修复失败，保留原始尺寸:', cropErr);
+                        }
                     }
+                } else {
+                    // 没请求尺寸：按模型原生输出为准，reqWidth/reqHeight 存 0 不在 UI 显示
+                    width = 0;
+                    height = 0;
                 }
 
                 const item = {
@@ -8957,10 +8968,10 @@ ${keywordsList}
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
                 loading.style.display = 'none';
-                const dimsNote = (actualWidth !== width || actualHeight !== height)
+                const dimsNote = userRequestedSize && (actualWidth !== width || actualHeight !== height)
                     ? ` (API返回${actualWidth}×${actualHeight})`
                     : '';
-                showToast(`✓ ${providerName}:${modelId} 生成成功${dimsNote}${ratioWarning ? ' ' + ratioWarning : ''}`, ratioOk ? 'success' : 'warning');
+                showToast(`✓ ${providerName}:${modelId} ${finalWidth}×${finalHeight} 生成成功${dimsNote}${ratioWarning ? ' ' + ratioWarning : ''}`, ratioOk ? 'success' : 'warning');
             } catch (e) {
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
                 let msg = e.message || String(e);
