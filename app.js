@@ -8030,6 +8030,51 @@ ${keywordsList}
             return diff < 0.05;
         }
 
+        // Canvas 居中裁剪：将图片缩放到目标比例 (cover 模式不留黑边)
+        // 只在 API 比例漂移时才调用，不作为常规后处理
+        function coverCropToRatio(base64, targetRatioW, targetRatioH) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const srcW = img.naturalWidth;
+                    const srcH = img.naturalHeight;
+                    const srcRatio = srcW / srcH;
+                    const targetRatio = targetRatioW / targetRatioH;
+
+                    const canvas = document.createElement('canvas');
+
+                    if (srcRatio > targetRatio) {
+                        // 源图更宽 → 保持高度，裁左右
+                        const newW = Math.round(srcH * targetRatio);
+                        canvas.width = newW;
+                        canvas.height = srcH;
+                        const sx = Math.round((srcW - newW) / 2);
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, sx, 0, newW, srcH, 0, 0, newW, srcH);
+                    } else {
+                        // 源图更高 → 保持宽度，裁上下
+                        const newH = Math.round(srcW / targetRatio);
+                        canvas.width = srcW;
+                        canvas.height = newH;
+                        const sy = Math.round((srcH - newH) / 2);
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, sy, srcW, newH, 0, 0, srcW, newH);
+                    }
+                    resolve({
+                        base64: canvas.toDataURL('image/png'),
+                        width: canvas.width,
+                        height: canvas.height
+                    });
+                };
+                img.onerror = () => reject(new Error('图片加载失败'));
+                img.src = base64;
+            });
+        }
+
         // 判断模型是否支持精确宽高（而非仅比例）
         // gpt-image-* / dall-e-* 只接受 ratio，不接受 width×height
         function modelSupportsExactSize(modelId) {
@@ -8808,20 +8853,37 @@ ${keywordsList}
                 }
 
                 // 比例校验：如果 API 返回的宽高比和请求不一致，说明图像真正变形了
-                const ratioOk = ratioMatches(width, height, actualWidth, actualHeight);
+                // 此时用 Canvas 居中裁剪到目标比例（不留黑边），这是针对 API 端缺陷的兜底修复
+                let finalBase64 = rawBase64;
+                let finalWidth = actualWidth;
+                let finalHeight = actualHeight;
+                let ratioOk = ratioMatches(width, height, actualWidth, actualHeight);
                 let ratioWarning = '';
+
                 if (!ratioOk) {
                     const reqR = computeRatio(width, height);
                     const realR = computeRatio(actualWidth, actualHeight);
                     ratioWarning = `⚠️ 比例漂移: 请求${reqR.w}:${reqR.h} → 实际${actualWidth}×${actualHeight}(${realR.w}:${realR.h})`;
-                    console.warn('[ImageGen]', ratioWarning);
+                    console.warn('[ImageGen]', ratioWarning, '→ 自动裁剪修复');
+
+                    try {
+                        const cropped = await coverCropToRatio(rawBase64, width, height);
+                        finalBase64 = cropped.base64;
+                        finalWidth = cropped.width;
+                        finalHeight = cropped.height;
+                        console.log(`[ImageGen] 裁剪修复完成: ${actualWidth}×${actualHeight} → ${finalWidth}×${finalHeight}, 比例已对齐`);
+                        ratioOk = true; // 修复后标记为正确
+                        ratioWarning += ' → 已居中裁剪修复';
+                    } catch (cropErr) {
+                        console.warn('[ImageGen] 裁剪修复失败，保留原始尺寸:', cropErr);
+                    }
                 }
 
                 const item = {
                     id: Date.now(),
                     prompt,
-                    width: actualWidth,
-                    height: actualHeight,
+                    width: finalWidth,
+                    height: finalHeight,
                     reqWidth: width,
                     reqHeight: height,
                     ratioOk,
@@ -8830,7 +8892,7 @@ ${keywordsList}
                     modelId,
                     quality: qualityLevel,
                     seed,
-                    base64: rawBase64,
+                    base64: finalBase64,
                     time: new Date().toISOString()
                 };
                 try { await saveImageGenToHistory(item); } catch (saveErr) {
@@ -8842,7 +8904,7 @@ ${keywordsList}
                 btn.textContent = '🎨 生成图片';
                 loading.style.display = 'none';
                 const dimsNote = (actualWidth !== width || actualHeight !== height)
-                    ? ` (实际${actualWidth}×${actualHeight})`
+                    ? ` (API返回${actualWidth}×${actualHeight})`
                     : '';
                 showToast(`✓ ${providerName}:${modelId} 生成成功${dimsNote}${ratioWarning ? ' ' + ratioWarning : ''}`, ratioOk ? 'success' : 'warning');
             } catch (e) {

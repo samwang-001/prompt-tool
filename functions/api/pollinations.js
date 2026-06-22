@@ -26,16 +26,20 @@ export async function onRequest(context) {
     });
   }
 
-  const upstreamUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
+  // Pollinations 最新文档推荐 gen.pollinations.ai 域名，对 width/height 支持更好
+  const upstreamUrl = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
+  console.log(`[Pollinations] 发起请求: ${width}×${height} model=${model} seed=${seed}`);
 
   try {
     const response = await fetch(upstreamUrl, {
       method: 'GET',
       headers: {
-        // 关键：不转发 Origin 头，让 Pollinations API 正常响应
         'Accept': 'image/*',
       }
     });
+
+    // 读取响应，记录实际尺寸用于调试
+    const arrayBuffer = await response.arrayBuffer();
 
     if (!response.ok) {
       return new Response(
@@ -47,9 +51,17 @@ export async function onRequest(context) {
       );
     }
 
-    // 透传图片响应
+    if (arrayBuffer.byteLength < 100) {
+      return new Response(
+        JSON.stringify({ error: 'Pollinations 返回了空图片' }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[Pollinations] 成功: ${arrayBuffer.byteLength} bytes, 请求尺寸 ${width}×${height}`);
+
     const contentType = response.headers.get('content-type') || 'image/jpeg';
-    return new Response(response.body, {
+    return new Response(arrayBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
