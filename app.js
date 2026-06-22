@@ -8084,6 +8084,7 @@ ${keywordsList}
 
         // 模型切换时：1) 更新控件状态 2) 设为模型原生尺寸（除非用户已手动选定尺寸）
         let _imageGenUserSetSize = false; // 用户是否手动选择了比例或自定义尺寸
+        let _imageGenActiveRatio = null; // 当前选中的比例标签（如 "1:1"），仅用于 UI 显示，不传给 API
 
         function onModelChange() {
             const rawModel = document.getElementById('imageGenModel').value;
@@ -8111,11 +8112,17 @@ ${keywordsList}
             if (!_imageGenUserSetSize) {
                 const native = getModelNativeSize(modelId);
                 setImageGenSize(native.width, native.height);
+                _imageGenActiveRatio = null;
                 // 取消所有比例按钮的高亮（因为现在是模型原生尺寸）
                 document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
                 // 清空自定义输入框
                 document.getElementById('imgGenCustomWidth').value = '';
                 document.getElementById('imgGenCustomHeight').value = '';
+            } else if (_imageGenActiveRatio) {
+                // 用户选了比例：保持比例标签，不显示像素值
+                sizeLabel.textContent = _imageGenActiveRatio;
+                sizeHint.style.display = 'block';
+                sizeHint.textContent = '💡 API 自行决定实际尺寸';
             } else {
                 // 保留用户设置的尺寸，只更新标签
                 const native = getModelNativeSize(modelId);
@@ -8535,6 +8542,7 @@ ${keywordsList}
             }
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             setImageGenSize(w, h);
+            _imageGenActiveRatio = null; // 自定义尺寸覆盖比例选择
             _imageGenUserSetSize = true; // 用户手动选定了尺寸
             document.getElementById('imageGenSizeHint').style.display = 'none';
             showToast(`已设为 ${w}×${h}`, 'success');
@@ -8567,6 +8575,7 @@ ${keywordsList}
             const h = parseInt(btn.dataset.h);
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             setImageGenSize(w, h);
+            _imageGenActiveRatio = null; // 预设尺寸覆盖比例选择
             _imageGenUserSetSize = true; // 用户手动选定了尺寸
             document.getElementById('imgGenCustomWidth').value = w;
             document.getElementById('imgGenCustomHeight').value = h;
@@ -8701,19 +8710,26 @@ ${keywordsList}
         function selectImageGenRatio(btn) {
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const w = parseInt(btn.dataset.w);
-            const h = parseInt(btn.dataset.h);
-            setImageGenSize(w, h);
-            _imageGenUserSetSize = true; // 用户手动选定了尺寸
+            const ratio = btn.dataset.ratio;
+            _imageGenActiveRatio = ratio; // 仅记录比例标签，不设具体像素值
+            _imageGenUserSetSize = true;
+            // 清空隐藏尺寸 input（选了比例不代表设置了具体像素）
+            document.getElementById('imageGenWidth').value = '';
+            document.getElementById('imageGenHeight').value = '';
             // 同步清空自定义输入框
             document.getElementById('imgGenCustomWidth').value = '';
             document.getElementById('imgGenCustomHeight').value = '';
+            // 更新标签显示比例而非像素
+            const sizeLabel = document.getElementById('imageGenSizeLabel');
+            sizeLabel.textContent = ratio;
             const hint = document.getElementById('imageGenSizeHint');
-            hint.style.display = 'none';
+            hint.style.display = 'block';
+            hint.textContent = `💡 API 自行决定实际尺寸`;
         }
 
         // 提取智能尺寸解析逻辑（被 selectSmartSize 和 doImageGen 复用）
         function applySmartSize() {
+            _imageGenActiveRatio = null; // 智能模式直接设定尺寸，覆盖比例
             const prompt = document.getElementById('imageGenPrompt').value.trim();
             const rawModel = document.getElementById('imageGenModel')?.value || '';
             const { modelId } = parseModelValue(rawModel);
@@ -8910,15 +8926,16 @@ ${keywordsList}
                 let finalWidth = actualWidth;
                 let finalHeight = actualHeight;
 
-                const hasReq = width > 0 && height > 0;
-                const reqDiffers = hasReq && (actualWidth !== width || actualHeight !== height);
+                const hasCustomSize = width > 0 && height > 0;
+                const activeRatio = _imageGenActiveRatio;
                 const item = {
                     id: Date.now(),
                     prompt,
                     width: finalWidth,
                     height: finalHeight,
-                    reqWidth: width,
-                    reqHeight: height,
+                    reqWidth: hasCustomSize ? width : 0,
+                    reqHeight: hasCustomSize ? height : 0,
+                    reqRatio: activeRatio || '',
                     model: rawModel,
                     provider: providerKey,
                     modelId,
@@ -8935,9 +8952,14 @@ ${keywordsList}
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
                 loading.style.display = 'none';
-                const dimsNote = hasReq
-                    ? ` 请求${width}×${height} → API返回${actualWidth}×${actualHeight}`
-                    : ` ${finalWidth}×${finalHeight}`;
+                let dimsNote;
+                if (activeRatio) {
+                    dimsNote = ` 请求${activeRatio} → API返回${actualWidth}×${actualHeight}`;
+                } else if (hasCustomSize) {
+                    dimsNote = ` 请求${width}×${height} → API返回${actualWidth}×${actualHeight}`;
+                } else {
+                    dimsNote = ` ${finalWidth}×${finalHeight}`;
+                }
                 showToast(`✓ ${providerName}:${modelId}${dimsNote} 生成成功`, 'success');
             } catch (e) {
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
@@ -9018,9 +9040,11 @@ ${keywordsList}
                             <div class="image-gen-item-info">
                                 <div class="image-gen-item-prompt" title="${escapeHtml(item.prompt)}">${escapeHtml(item.prompt.substring(0, 60))}${item.prompt.length > 60 ? '...' : ''}</div>
                                 <div class="image-gen-item-meta">
-                                    ${item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height)
-                                        ? `<span style="color:#60a5fa;" title="请求尺寸">请求 ${item.reqWidth}×${item.reqHeight} → ${item.width}×${item.height}</span>`
-                                        : `<span>${item.width}×${item.height}</span>`}
+                                    ${item.reqRatio
+                                        ? `<span style="color:#60a5fa;" title="请求比例">请求 ${item.reqRatio} → ${item.width}×${item.height}</span>`
+                                        : item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height)
+                                            ? `<span style="color:#60a5fa;" title="请求尺寸">请求 ${item.reqWidth}×${item.reqHeight} → ${item.width}×${item.height}</span>`
+                                            : `<span>${item.width}×${item.height}</span>`}
                                     <span>${formatModelDisplay(item.model || '', item.modelId || '')}</span>
                                     <span>seed:${item.seed}</span>
                                     ${item.quality ? `<span class="quality-badge" style="color:${item.quality==='high'?'#f59e0b':item.quality==='standard'?'#60a5fa':'#9ca3af'}">${item.quality==='high'?'💎':item.quality==='standard'?'🎯':'⚡'}</span>` : ''}
@@ -9049,7 +9073,7 @@ ${keywordsList}
                     <img src="${item.base64}" alt="${escapeHtml(item.prompt)}">
                     <div class="image-gen-preview-info">
                         <p>${escapeHtml(item.prompt)}</p>
-                        <small>${item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height) ? `<span style="color:#86efac;">请求 ${item.reqWidth}×${item.reqHeight} → 实际 </span>` : ''}${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}${item.quality ? ` · ${item.quality==='high'?'💎 高品质':item.quality==='standard'?'🎯 标准':'⚡ 快速'}` : ''}</small>
+                        <small>${item.reqRatio ? `<span style="color:#86efac;">请求 ${item.reqRatio} → 实际 </span>` : item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height) ? `<span style="color:#86efac;">请求 ${item.reqWidth}×${item.reqHeight} → 实际 </span>` : ''}${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}${item.quality ? ` · ${item.quality==='high'?'💎 高品质':item.quality==='standard'?'🎯 标准':'⚡ 快速'}` : ''}</small>
                         <div style="margin-top:0.65rem;display:flex;gap:0.5rem;justify-content:center;">
                             <button class="btn btn-ghost btn-sm" onclick="downloadImageGenItem(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">⬇ 下载</button>
                             <button class="btn btn-ghost btn-sm" onclick="copyImageGenPrompt(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">📋 复制提示词</button>
