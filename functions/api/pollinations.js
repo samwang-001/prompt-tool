@@ -26,8 +26,7 @@ export async function onRequest(context) {
     });
   }
 
-  // Pollinations 最新文档推荐 gen.pollinations.ai 域名，对 width/height 支持更好
-  const upstreamUrl = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
+  const upstreamUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
   console.log(`[Pollinations] 发起请求: ${width}×${height} model=${model} seed=${seed}`);
 
   try {

@@ -160,7 +160,7 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    const upstreamUrl = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
+    const upstreamUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=${model}`;
     console.log(`[Pollinations] 代理请求: ${model} ${width}×${height} → ${upstreamUrl}`);
 
     const proxyReq = https.get(upstreamUrl, { timeout: PROXY_TIMEOUT * 2 }, (proxyRes) => {
