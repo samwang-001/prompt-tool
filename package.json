@@ -1,4 +1,26 @@
 {
+  "name": "prompt-design-tool",
+  "version": "1.0.0",
+  "description": "AI Prompt Design Tool - 智能提示词设计与图片生成工具",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "deploy": "bash deploy.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samwang-001/prompt-tool.git"
+  },
+  "keywords": [
+    "prompt",
+    "design",
+    "ai",
+    "image-generation",
+    "supabase"
+  ],
+  "author": "",
+  "license": "MIT",
   "devDependencies": {
     "supabase": "^2.105.0"
   }

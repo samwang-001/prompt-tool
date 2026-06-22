@@ -337,27 +337,48 @@ class PerformanceMonitor {
     
     /**
      * 记录页面加载性能
+     * 使用 Navigation Timing Level 2 API（替代已废弃的 performance.timing）
      */
     recordPageLoad() {
-        if (!window.performance || !window.performance.timing) {
+        if (!window.performance) {
             console.warn('[PerformanceMonitor] Performance API 不可用');
             return;
         }
-        
-        const timing = window.performance.timing;
-        const metrics = {
-            dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
-            tcpConnection: timing.connectEnd - timing.connectStart,
-            requestTime: timing.responseEnd - timing.requestStart,
-            domParsing: timing.domInteractive - timing.responseEnd,
-            domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-            pageLoad: timing.loadEventEnd - timing.navigationStart
-        };
-        
-        this.metrics.pageLoad = metrics;
-        console.log('[PerformanceMonitor] 页面加载性能:', metrics);
-        
-        return metrics;
+
+        // 优先使用 Navigation Timing Level 2 API
+        const navEntry = performance.getEntriesByType('navigation')[0];
+        if (navEntry) {
+            const metrics = {
+                dnsLookup: Math.round(navEntry.domainLookupEnd - navEntry.domainLookupStart),
+                tcpConnection: Math.round(navEntry.connectEnd - navEntry.connectStart),
+                requestTime: Math.round(navEntry.responseEnd - navEntry.requestStart),
+                domParsing: Math.round(navEntry.domInteractive - navEntry.responseEnd),
+                domContentLoaded: Math.round(navEntry.domContentLoadedEventEnd - navEntry.fetchStart),
+                pageLoad: Math.round(navEntry.loadEventEnd - navEntry.fetchStart),
+                ttfb: Math.round(navEntry.responseStart - navEntry.fetchStart),
+            };
+            this.metrics.pageLoad = metrics;
+            console.log('[PerformanceMonitor] 页面加载性能:', metrics);
+            return metrics;
+        }
+
+        // 降级到旧的 timing API
+        const timing = performance.timing;
+        if (timing && timing.navigationStart) {
+            const metrics = {
+                dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
+                tcpConnection: timing.connectEnd - timing.connectStart,
+                requestTime: timing.responseEnd - timing.requestStart,
+                domParsing: timing.domInteractive - timing.responseEnd,
+                domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
+                pageLoad: timing.loadEventEnd - timing.navigationStart,
+            };
+            this.metrics.pageLoad = metrics;
+            console.log('[PerformanceMonitor] 页面加载性能 (legacy):', metrics);
+            return metrics;
+        }
+
+        console.warn('[PerformanceMonitor] 无法获取页面加载指标');
     }
     
     /**
@@ -399,8 +420,14 @@ if (typeof module !== 'undefined' && module.exports) {
     window.globalErrorMonitor = globalErrorMonitor;
     window.globalPerformanceMonitor = globalPerformanceMonitor;
     
-    // 自动启用（开发环境）
-    if (typeof isDevelopment !== 'undefined' && isDevelopment()) {
+    // 自动启用（生产环境也启用，静默模式不发 console）
+    const isDev = typeof isDevelopment !== 'undefined' && isDevelopment();
+    if (isDev) {
         globalErrorMonitor.enable();
+    } else {
+        // 生产环境启用监控，但关闭控制台输出
+        globalErrorMonitor.enableConsole = false;
+        globalErrorMonitor.enable();
+        console.log('[ErrorMonitor] 生产环境静默监控已启用');
     }
 }
