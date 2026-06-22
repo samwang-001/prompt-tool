@@ -8082,7 +8082,9 @@ ${keywordsList}
             return !(id.startsWith('gpt-image') || id.includes('dall-e'));
         }
 
-        // 模型切换时更新尺寸控件的可用状态
+        // 模型切换时：1) 更新控件状态 2) 设为模型原生尺寸（除非用户已手动选定尺寸）
+        let _imageGenUserSetSize = false; // 用户是否手动选择了比例或自定义尺寸
+
         function onModelChange() {
             const rawModel = document.getElementById('imageGenModel').value;
             const { modelId } = parseModelValue(rawModel);
@@ -8098,19 +8100,33 @@ ${keywordsList}
                 ratioRow.style.display = 'flex';
                 sizeHint.style.display = 'block';
                 sizeHint.textContent = '💡 此模型仅支持比例，实际尺寸由 API 决定';
-                // 更新标签为比例格式
-                const w = parseInt(document.getElementById('imageGenWidth').value) || 1024;
-                const h = parseInt(document.getElementById('imageGenHeight').value) || 1024;
-                const r = computeRatio(w, h);
-                sizeLabel.textContent = `${r.w}:${r.h}`;
             } else {
                 // 支持精确尺寸的模型：全部可用
                 customRow.style.display = 'flex';
                 ratioRow.style.display = 'flex';
                 sizeHint.style.display = 'none';
-                const w = parseInt(document.getElementById('imageGenWidth').value) || 1024;
-                const h = parseInt(document.getElementById('imageGenHeight').value) || 1024;
-                sizeLabel.textContent = `${w}×${h}`;
+            }
+
+            // 切换模型时，除非用户已手动选定尺寸，否则重置为模型原生尺寸
+            if (!_imageGenUserSetSize) {
+                const native = getModelNativeSize(modelId);
+                setImageGenSize(native.width, native.height);
+                // 取消所有比例按钮的高亮（因为现在是模型原生尺寸）
+                document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
+                // 清空自定义输入框
+                document.getElementById('imgGenCustomWidth').value = '';
+                document.getElementById('imgGenCustomHeight').value = '';
+            } else {
+                // 保留用户设置的尺寸，只更新标签
+                const native = getModelNativeSize(modelId);
+                const w = parseInt(document.getElementById('imageGenWidth').value) || native.width;
+                const h = parseInt(document.getElementById('imageGenHeight').value) || native.height;
+                if (supportsExact) {
+                    sizeLabel.textContent = `${w}×${h}`;
+                } else {
+                    const r = computeRatio(w, h);
+                    sizeLabel.textContent = `${r.w}:${r.h}`;
+                }
             }
         }
 
@@ -8520,6 +8536,7 @@ ${keywordsList}
             }
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             setImageGenSize(w, h);
+            _imageGenUserSetSize = true; // 用户手动选定了尺寸
             document.getElementById('imageGenSizeHint').style.display = 'none';
             showToast(`已设为 ${w}×${h}`, 'success');
         }
@@ -8551,6 +8568,7 @@ ${keywordsList}
             const h = parseInt(btn.dataset.h);
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             setImageGenSize(w, h);
+            _imageGenUserSetSize = true; // 用户手动选定了尺寸
             document.getElementById('imgGenCustomWidth').value = w;
             document.getElementById('imgGenCustomHeight').value = h;
         }
@@ -8619,6 +8637,36 @@ ${keywordsList}
             return 2048; // 默认上限
         }
 
+        // 每个模型的原生/推荐尺寸（按模型定义，不做换算）
+        function getModelNativeSize(modelId) {
+            const id = (modelId || '').toLowerCase();
+            // Pollinations 系列
+            if (id === 'flux') return { width: 1024, height: 1024 };
+            if (id === 'zimage') return { width: 1024, height: 1024 };
+            if (id === 'seedream') return { width: 1024, height: 1024 };
+            if (id === 'klein') return { width: 1024, height: 1024 };
+            if (id === 'qwen-image') return { width: 1328, height: 1328 };
+            if (id === 'grok-imagine') return { width: 1024, height: 1024 };
+            if (id.includes('ideogram')) return { width: 1024, height: 1024 };
+            if (id.includes('nanobanana')) return { width: 512, height: 512 };
+            // Puter OpenAI（仅支持比例，但给原生默认像素值）
+            if (id.startsWith('gpt-image') || id.includes('dall-e')) return { width: 1024, height: 1024 };
+            // Puter Google
+            if (id.startsWith('gemini-') || id.includes('imagen') || id.includes('flash-image')) return { width: 1024, height: 1024 };
+            // Puter Flux
+            if (id.includes('flux-1.1-pro')) return { width: 1440, height: 1440 };
+            if (id.includes('flux-schnell')) return { width: 1024, height: 1024 };
+            // Puter SDXL
+            if (id.includes('stable-diffusion')) return { width: 1024, height: 1024 };
+            // Puter 其他
+            if (id.includes('dreamshaper')) return { width: 1024, height: 1024 };
+            if (id.includes('hidream')) return { width: 1024, height: 1024 };
+            if (id.includes('qwen')) return { width: 1328, height: 1328 };
+            if (id.includes('seedream') || id.includes('bytedance')) return { width: 1024, height: 1024 };
+            // 兜底
+            return { width: 1024, height: 1024 };
+        }
+
         // 画质切换时更新提示
         function onQualityChange() {
             const q = document.getElementById('imageGenQuality')?.value || 'standard';
@@ -8657,6 +8705,7 @@ ${keywordsList}
             const w = parseInt(btn.dataset.w);
             const h = parseInt(btn.dataset.h);
             setImageGenSize(w, h);
+            _imageGenUserSetSize = true; // 用户手动选定了尺寸
             // 同步清空自定义输入框
             document.getElementById('imgGenCustomWidth').value = '';
             document.getElementById('imgGenCustomHeight').value = '';
@@ -8667,32 +8716,36 @@ ${keywordsList}
         // 提取智能尺寸解析逻辑（被 selectSmartSize 和 doImageGen 复用）
         function applySmartSize() {
             const prompt = document.getElementById('imageGenPrompt').value.trim();
-            if (!prompt) {
-                setImageGenSize(1024, 1024);
-                const hint = document.getElementById('imageGenSizeHint');
-                hint.style.display = 'block';
-                hint.textContent = '⚠️ 未检测到尺寸信息，使用默认 1024×1024';
-                return;
-            }
             const rawModel = document.getElementById('imageGenModel')?.value || '';
             const { modelId } = parseModelValue(rawModel);
             const maxRes = getModelMaxResolution(modelId);
-            const result = parseSmartSize(prompt, maxRes);
+            const native = getModelNativeSize(modelId);
+
+            if (!prompt) {
+                // 无提示词：使用模型原生尺寸
+                setImageGenSize(native.width, native.height);
+                const hint = document.getElementById('imageGenSizeHint');
+                hint.style.display = 'block';
+                hint.textContent = `💡 使用模型原生 ${native.width}×${native.height}`;
+                return;
+            }
+            const result = parseSmartSize(prompt, maxRes, native);
             setImageGenSize(result.width, result.height);
             const hint = document.getElementById('imageGenSizeHint');
             hint.style.display = 'block';
             hint.textContent = result.hint
                 ? `💡 识别到: ${result.hint} → ${result.width}×${result.height}`
-                : `使用默认 ${result.width}×${result.height}`;
+                : `使用模型原生 ${result.width}×${result.height}`;
         }
 
         function selectSmartSize(btn) {
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            _imageGenUserSetSize = true; // 智能模式也算用户手动选定
             applySmartSize();
         }
 
-        function parseSmartSize(text, maxRes = 2048) {
+        function parseSmartSize(text, maxRes = 2048, fallbackNative = { width: 1024, height: 1024 }) {
             const t = text.toLowerCase();
             let w, h, hint = '';
 
@@ -8773,10 +8826,10 @@ ${keywordsList}
                 else if (/卡片|card/.test(t)) { w = 1200; h = 900; hint = '卡片 (4:3)'; }
             }
 
-            // 5. 默认 1:1
+            // 5. 无匹配时使用模型原生尺寸
             if (!w || !h) {
-                w = 1024;
-                h = 1024;
+                w = fallbackNative.width;
+                h = fallbackNative.height;
                 hint = '';
             }
 
@@ -8801,10 +8854,11 @@ ${keywordsList}
                 applySmartSize();
             }
 
-            let width = parseInt(document.getElementById('imageGenWidth').value) || 1024;
-            let height = parseInt(document.getElementById('imageGenHeight').value) || 1024;
             const rawModel = document.getElementById('imageGenModel').value;
             const { provider: providerKey, modelId } = parseModelValue(rawModel);
+            const native = getModelNativeSize(modelId);
+            let width = parseInt(document.getElementById('imageGenWidth').value) || native.width;
+            let height = parseInt(document.getElementById('imageGenHeight').value) || native.height;
             // 检查是否超过模型最大分辨率（仅警告，不做换算）
             const maxRes = getModelMaxResolution(modelId);
             if (width > maxRes || height > maxRes) {
