@@ -8110,8 +8110,8 @@ ${keywordsList}
         }
 
         /**
-         * 用 Canvas 将图片强制重绘到目标尺寸（contain 模式，居中，深色背景）
-         * 这是最稳定的防变形方案：无论 API 返回什么尺寸，最终输出绝对匹配请求尺寸
+         * 用 Canvas 将图片强制重绘到目标尺寸
+         * 智能策略：比例接近时填充 → 偏差大时 cover 裁剪（避免 contain 的大黑边）
          * @param {string} src - 原始 base64
          * @param {number} targetW - 目标宽度
          * @param {number} targetH - 目标高度
@@ -8127,27 +8127,35 @@ ${keywordsList}
                         canvas.height = targetH;
                         const ctx = canvas.getContext('2d');
 
-                        // 深色背景填充（匹配主题）
+                        // 深色背景填充（匹配主题，作为回退色）
                         ctx.fillStyle = '#0d1117';
                         ctx.fillRect(0, 0, targetW, targetH);
 
-                        // contain 模式：按比例缩放，居中绘制，不出裁剪
                         const srcRatio = img.naturalWidth / img.naturalHeight;
                         const tgtRatio = targetW / targetH;
+                        const ratioDiff = Math.abs(srcRatio - tgtRatio) / tgtRatio;
                         let dw, dh, dx, dy;
 
-                        if (srcRatio > tgtRatio) {
-                            // 原图更宽 → 宽度撑满，上下留黑边
+                        // 策略：比例偏差 < 5% → 直接填充（微小拉伸看不出）
+                        //       偏差大 → cover 模式（裁剪填充，不留黑边）
+                        if (ratioDiff < 0.05) {
+                            // 填满整个画布（微小比例差异可忽略）
                             dw = targetW;
-                            dh = Math.round(targetW / srcRatio);
+                            dh = targetH;
                             dx = 0;
-                            dy = Math.round((targetH - dh) / 2);
-                        } else {
-                            // 原图更高 → 高度撑满，左右留黑边
+                            dy = 0;
+                        } else if (srcRatio > tgtRatio) {
+                            // 原图更宽 → cover: 高度撑满，左右裁掉多余
                             dh = targetH;
                             dw = Math.round(targetH * srcRatio);
                             dx = Math.round((targetW - dw) / 2);
                             dy = 0;
+                        } else {
+                            // 原图更高 → cover: 宽度撑满，上下裁掉多余
+                            dw = targetW;
+                            dh = Math.round(targetW / srcRatio);
+                            dx = 0;
+                            dy = Math.round((targetH - dh) / 2);
                         }
 
                         ctx.drawImage(img, dx, dy, dw, dh);
