@@ -8033,37 +8033,55 @@ ${keywordsList}
             return { available: true };
         }
 
-        // 自动切换到可用的模型
+        // 自动切换到可用的模型（从所有 provider 中选最佳可用模型）
         function autoSwitchToAvailableModel() {
             const select = document.getElementById('imageGenModel');
             if (!select) return;
             
-            // 优先选择 DALL·E 3
-            for (const option of select.options) {
-                if (!option.disabled && option.value.includes('dall-e-3')) {
-                    select.value = option.value;
-                    showToast(`已自动切换到: ${option.text}`, 'info');
+            // 优先在同一 provider 内切换，否则跨 provider 切换
+            const currentVal = select.value;
+            const currentProvider = currentVal.includes('::') ? currentVal.split('::')[0] : '';
+            
+            // 优先级：当前 provider 内可用模型 → 另一个 provider 的可用模型 → 任何可用模型
+            const getAvailable = (providerFilter) => {
+                const candidates = [];
+                for (const option of select.options) {
+                    if (option.disabled || option.value.startsWith('_')) continue;
+                    if (providerFilter && !option.value.startsWith(providerFilter + '::') && option.value !== providerFilter) continue;
+                    candidates.push(option);
+                }
+                return candidates;
+            };
+            
+            // 尝试1: 同一 provider 内切换
+            if (currentProvider) {
+                const sameProvider = getAvailable(currentProvider);
+                if (sameProvider.length > 0) {
+                    select.value = sameProvider[0].value;
+                    showToast(`已自动切换到: ${sameProvider[0].text}`, 'info');
                     return;
                 }
             }
             
-            // 其次选择 Gemini
-            for (const option of select.options) {
-                if (!option.disabled && option.value.includes('gemini')) {
-                    select.value = option.value;
-                    showToast(`已自动切换到: ${option.text}`, 'info');
-                    return;
-                }
+            // 尝试2: 跨 provider 切换到 Pollinations（如果当前是 Puter）
+            const otherProvider = currentProvider === 'puter' ? 'pollinations' : 'puter';
+            const otherOptions = getAvailable(otherProvider);
+            if (otherOptions.length > 0) {
+                select.value = otherOptions[0].value;
+                showToast(`🔄 已切换到 ${otherProvider === 'pollinations' ? 'Pollinations' : 'Puter.js'}: ${otherOptions[0].text}`, 'info');
+                return;
             }
             
-            // 最后选择 Flux
-            for (const option of select.options) {
-                if (!option.disabled && option.value.includes('flux')) {
-                    select.value = option.value;
-                    showToast(`已自动切换到: ${option.text}`, 'info');
-                    return;
-                }
+            // 尝试3: 任何可用模型
+            const anyAvailable = getAvailable(null);
+            if (anyAvailable.length > 0) {
+                select.value = anyAvailable[0].value;
+                showToast(`已自动切换到: ${anyAvailable[0].text}`, 'info');
+                return;
             }
+            
+            // 所有模型都不可用
+            showToast('⚠️ 所有模型额度已耗尽，请稍后再试', 'warning', 5000);
         }
 
 
@@ -8186,10 +8204,13 @@ ${keywordsList}
                     if (!resp) {
                         throw new Error(`[网络] Pollinations 连接失败: ${lastNetErr ? lastNetErr.message : '未知错误'}`);
                     }
-                    if (resp.status === 402) {
-                        // 服务端限流，不是网络问题
+                    if (resp.status === 402 || resp.status === 403) {
+                        // 402 Payment Required / 403 Forbidden — 服务端拒接
                         const text = await resp.text().catch(() => '');
                         const isQueueFull = text.includes('Queue full') || text.includes('queued');
+                        if (resp.status === 403) {
+                            throw new Error(`[限流] Pollinations 服务暂时拒接(403)，请切换到 Puter.js 模型重试`);
+                        }
                         throw new Error(`[限流] Pollinations 免费队列已满，请切换到 Puter.js 模型重试`);
                     }
                     if (!resp.ok) throw new Error(`[HTTP ${resp.status}] Pollinations 服务异常`);

@@ -166,7 +166,7 @@ const server = http.createServer((req, res) => {
     'Pragma': 'no-cache',
     'Expires': '0',
     'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
+    'X-Frame-Options': 'SAMEORIGIN',
   };
 
   fs.readFile(safePath, (err, data) => {
