@@ -5891,16 +5891,29 @@ ${sampleStr}
                 currentModelId = null;
             }
 
+            // 导入统计（合并模式）
+            let formulaAdded = 0, formulaSkipped = 0;
+            let thesaurusCatAdded = 0, thesaurusCatMerged = 0, thesaurusWordsAdded = 0;
+            let defaultsUpdated = 0;
+            let tabsAdded = 0, tabsMerged = 0;
+
             // Import formulas
             if (data.formulas && Array.isArray(data.formulas)) {
                 if (isReplace) {
                     saveFormulas(data.formulas.map(f => ({ ...f })));
+                    formulaAdded = data.formulas.length;
                 } else {
                     const existingFormulas = getFormulas();
                     const existingIds = new Set(existingFormulas.map(f => f.id));
+                    const existingNames = new Set(existingFormulas.map(f => (f.name || '').toLowerCase().trim()));
                     data.formulas.forEach(f => {
-                        if (!existingIds.has(f.id)) {
+                        const nameKey = (f.name || '').toLowerCase().trim();
+                        if (existingIds.has(f.id) || existingNames.has(nameKey)) {
+                            formulaSkipped++;
+                        } else {
                             existingFormulas.push(f);
+                            existingNames.add(nameKey);
+                            formulaAdded++;
                         }
                     });
                     saveFormulas(existingFormulas);
@@ -5911,11 +5924,13 @@ ${sampleStr}
             if (data.thesaurus && Array.isArray(data.thesaurus)) {
                 if (isReplace) {
                     saveThesaurus(data.thesaurus.map(c => ({ ...c, words: [...c.words] })));
+                    thesaurusCatAdded = data.thesaurus.length;
                 } else {
                     const existingThesaurus = getThesaurus();
                     data.thesaurus.forEach(cat => {
                         const existing = existingThesaurus.find(c => c.name === cat.name);
                         if (existing) {
+                            const before = existing.words.length;
                             const textMap = new Map();
                             existing.words.forEach(w => textMap.set(getWordText(w), w));
                             cat.words.forEach(w => {
@@ -5924,8 +5939,13 @@ ${sampleStr}
                                 }
                             });
                             existing.words = Array.from(textMap.values());
+                            const added = existing.words.length - before;
+                            if (added > 0) thesaurusWordsAdded += added;
+                            thesaurusCatMerged++;
                         } else {
                             existingThesaurus.push(cat);
+                            thesaurusCatAdded++;
+                            thesaurusWordsAdded += cat.words.length;
                         }
                     });
                     saveThesaurus(existingThesaurus);
@@ -5942,11 +5962,13 @@ ${sampleStr}
                         }
                     });
                     saveThesaurusDefaults(defaults);
+                    defaultsUpdated = Object.keys(defaults).length;
                 } else {
                     const existingDefaults = getThesaurusDefaults();
                     Object.entries(data.thesaurusDefaults).forEach(([name, words]) => {
                         if (Array.isArray(words) && words.length > 0) {
                             existingDefaults[name] = words;
+                            defaultsUpdated++;
                         }
                     });
                     saveThesaurusDefaults(existingDefaults);
@@ -5957,6 +5979,7 @@ ${sampleStr}
             if (data.sizeTabs && Array.isArray(data.sizeTabs)) {
                 if (isReplace) {
                     saveSizeTabs(data.sizeTabs.map(t => ({ ...t, entries: (t.entries || []).map(e => ({ ...e })) })));
+                    tabsAdded = data.sizeTabs.length;
                 } else {
                     const existingTabs = getSizeTabs();
                     const existingIds = new Set(existingTabs.map(t => t.id));
@@ -5974,9 +5997,11 @@ ${sampleStr}
                                     }
                                 });
                                 existing.entries = mergedEntries;
+                                tabsMerged++;
                             }
                         } else {
                             existingTabs.push({ ...tab, entries: (tab.entries || []).map(e => ({ ...e })) });
+                            tabsAdded++;
                         }
                     });
                     saveSizeTabs(existingTabs);
@@ -5993,8 +6018,22 @@ ${sampleStr}
             updateFormulaSelect();
             closeImportModal();
 
-            const modeLabel = isReplace ? '（替换模式）' : '（合并模式）';
-            showToast('数据导入成功 ' + modeLabel, 'success');
+            // 构造详细结果提示
+            const parts = [];
+            if (isReplace) {
+                parts.push('已替换全部数据');
+            } else {
+                if (formulaAdded > 0) parts.push(`公式 +${formulaAdded}`);
+                if (formulaSkipped > 0) parts.push(`公式跳过${formulaSkipped}个重复`);
+                if (thesaurusCatAdded > 0) parts.push(`词库分类 +${thesaurusCatAdded}`);
+                if (thesaurusWordsAdded > 0) parts.push(`新增词汇 ${thesaurusWordsAdded}`);
+                if (thesaurusCatMerged > 0 && thesaurusCatAdded === 0 && thesaurusWordsAdded === 0) parts.push('词库无新数据');
+                if (defaultsUpdated > 0) parts.push(`默认词库更新${defaultsUpdated}组`);
+                if (tabsAdded > 0) parts.push(`尺寸分组 +${tabsAdded}`);
+                if (tabsMerged > 0) parts.push(`尺寸分组合并${tabsMerged}个`);
+            }
+            const detail = parts.length > 0 ? ` (${parts.join('，')})` : '';
+            showToast('数据导入完成' + detail, parts.length > 0 ? 'success' : 'info');
         }
 
         // ==================== Version History (公式版本记录) - Cloud + Local ====================
