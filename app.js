@@ -1202,15 +1202,35 @@
                 const cloudThesaurus = await getThesaurusAsync();
                 
                 if (cloudFormulas.length === 0) {
-                    // 云端无数据：优先同步本地数据，否则用默认数据
-                    const localFormulas = getFormulas();
-                    if (localFormulas.length > 0) saveFormulas(localFormulas);
-                    else saveFormulas(getDefaultFormulas());
+                    // 云端无数据：优先同步用户隔离的本地数据
+                    const userFormulas = getFormulas();
+                    if (userFormulas.length > 0) {
+                        saveFormulas(userFormulas);
+                    } else {
+                        // 用户隔离key也为空：尝试从匿名key迁移（本机未登录时编辑的数据）
+                        const anonFormulas = loadData(STORAGE_KEYS.FORMULAS, []);
+                        if (anonFormulas.length > 0) {
+                            saveFormulas(anonFormulas);
+                            showToast(`已迁移 ${anonFormulas.length} 个本机公式到你的账号`, 'info');
+                        } else {
+                            saveFormulas(getDefaultFormulas());
+                        }
+                    }
                 }
                 if (cloudThesaurus.length === 0) {
-                    const localThesaurus = getThesaurus();
-                    if (localThesaurus.length > 0) saveThesaurus(localThesaurus);
-                    else saveThesaurus(getDefaultThesaurus());
+                    const userThesaurus = getThesaurus();
+                    if (userThesaurus.length > 0) {
+                        saveThesaurus(userThesaurus);
+                    } else {
+                        // 用户隔离key也为空：尝试从匿名key迁移
+                        const anonThesaurus = loadData(STORAGE_KEYS.THESAURUS, []);
+                        if (anonThesaurus.length > 0) {
+                            saveThesaurus(anonThesaurus);
+                            showToast(`已迁移 ${anonThesaurus.length} 个本机词库分类到你的账号`, 'info');
+                        } else {
+                            saveThesaurus(getDefaultThesaurus());
+                        }
+                    }
                 }
             } catch (e) { console.warn('重新加载数据失败:', e); }
             renderCategories(); renderFormulas(); renderTitleLayout(); renderHistory(); renderImageHistory();
@@ -1638,12 +1658,16 @@
         // ==================== Title Layout Management ====================
         const DEFAULT_TITLE_LAYOUT = {
             style: 'banner',
-            mainTitlePos: 'top-center',
             subtitlePos: 'below-main',
             fontSize: 'large-small',
             colorScheme: 'white-dark-bg',
             fontStyle: 'sans-bold',
             textEffect: 'none',
+            // 水平+垂直对齐替代原 mainTitlePos，9种组合更灵活
+            horizontalAlign: 'center',     // 水平对齐：left | center | right
+            verticalAlign: 'top',          // 垂直对齐：top | middle | bottom
+            layerMode: 'foreground',       // 前景后景：foreground | background-blend | layered
+            dividerStyle: 'none',          // 装饰分隔线：none | line | bracket | frame
             enabled: true
         };
 
@@ -1659,13 +1683,10 @@
         ];
 
         // 每种排版风格的联动规则：定义了该风格兼容的细节配置选项 + 切换风格时的默认值
-        // compatiblePos: 该风格允许的主标题位置选项（null表示全部允许）
-        // defaultPos: 切换到此风格时自动设置的主标题位置
+        // 位置由 horizontalAlign + verticalAlign 组合决定（3×3=9种）
         // 副标题位置、字号、字体风格同理
         const TITLE_STYLE_LINKAGE = {
             banner: {
-                defaultPos: 'top-center',
-                compatiblePos: ['top-center'],           // 横幅式只能顶部居中
                 defaultSubPos: 'below-main',
                 compatibleSubPos: ['below-main', 'inline'],
                 defaultFontSize: 'large-small',
@@ -1673,10 +1694,12 @@
                 defaultFontStyle: 'sans-bold',
                 compatibleFontStyle: ['sans-bold', 'black-heavy', 'serif'],
                 defaultColor: 'white-dark-bg',
+                defaultHAlign: 'center',
+                defaultVAlign: 'top',
+                defaultLayer: 'foreground',
+                defaultDivider: 'line',
             },
             poster: {
-                defaultPos: 'top-left',
-                compatiblePos: ['top-left', 'mid-horizontal'], // 海报式侧边位置
                 defaultSubPos: 'bottom-strip',
                 compatibleSubPos: ['bottom-strip', 'corner-tag'],
                 defaultFontSize: 'large-small',
@@ -1684,10 +1707,12 @@
                 defaultFontStyle: 'black-heavy',
                 compatibleFontStyle: ['black-heavy', 'sans-bold', 'serif'],
                 defaultColor: 'white-dark-bg',
+                defaultHAlign: 'left',
+                defaultVAlign: 'middle',
+                defaultLayer: 'foreground',
+                defaultDivider: 'none',
             },
             badge: {
-                defaultPos: 'top-left',
-                compatiblePos: ['top-left', 'top-center'],    // 角标式左上角
                 defaultSubPos: 'corner-tag',
                 compatibleSubPos: ['corner-tag', 'below-main'],
                 defaultFontSize: 'medium-equal',
@@ -1695,10 +1720,12 @@
                 defaultFontStyle: 'sans-bold',
                 compatibleFontStyle: ['sans-bold', 'black-heavy', 'handwrite'],
                 defaultColor: 'brand-match',
+                defaultHAlign: 'right',
+                defaultVAlign: 'top',
+                defaultLayer: 'foreground',
+                defaultDivider: 'bracket',
             },
             minimal: {
-                defaultPos: 'bottom-center',
-                compatiblePos: ['bottom-center'],             // 简约式只能底部居中
                 defaultSubPos: 'below-main',
                 compatibleSubPos: ['below-main', 'inline'],
                 defaultFontSize: 'medium-equal',
@@ -1706,10 +1733,12 @@
                 defaultFontStyle: 'light-elegant',
                 compatibleFontStyle: ['light-elegant', 'sans-bold', 'serif'],
                 defaultColor: 'black-light-bg',
+                defaultHAlign: 'center',
+                defaultVAlign: 'bottom',
+                defaultLayer: 'background-blend',
+                defaultDivider: 'none',
             },
             vertical: {
-                defaultPos: 'top-left',
-                compatiblePos: ['top-left', 'mid-horizontal'], // 竖排式侧边
                 defaultSubPos: 'bottom-strip',
                 compatibleSubPos: ['bottom-strip', 'corner-tag'],
                 defaultFontSize: 'large-small',
@@ -1717,10 +1746,12 @@
                 defaultFontStyle: 'calligraphy',
                 compatibleFontStyle: ['calligraphy', 'serif', 'handwrite'],
                 defaultColor: 'gold-gradient',
+                defaultHAlign: 'left',
+                defaultVAlign: 'middle',
+                defaultLayer: 'foreground',
+                defaultDivider: 'none',
             },
             magazine: {
-                defaultPos: 'mid-horizontal',
-                compatiblePos: ['mid-horizontal', 'top-center'], // 杂志式中央压图
                 defaultSubPos: 'below-main',
                 compatibleSubPos: ['below-main', 'inline', 'corner-tag'],
                 defaultFontSize: 'large-small',
@@ -1728,21 +1759,25 @@
                 defaultFontStyle: 'black-heavy',
                 compatibleFontStyle: ['black-heavy', 'serif', 'sans-bold'],
                 defaultColor: 'white-dark-bg',
+                defaultHAlign: 'center',
+                defaultVAlign: 'middle',
+                defaultLayer: 'layered',
+                defaultDivider: 'frame',
             },
             'tag-array': {
-                defaultPos: 'top-left',
-                compatiblePos: null,                           // 标签阵位置自由（本身就是散布式）
                 defaultSubPos: 'corner-tag',
-                compatibleSubPos: null,                        // 副标题也自由
+                compatibleSubPos: null,
                 defaultFontSize: 'medium-equal',
                 compatibleFontSize: null,
                 defaultFontStyle: 'handwrite',
-                compatibleFontStyle: null,                     // 标签阵字体自由
+                compatibleFontStyle: null,
                 defaultColor: 'brand-match',
+                defaultHAlign: 'left',
+                defaultVAlign: 'top',
+                defaultLayer: 'foreground',
+                defaultDivider: 'none',
             },
             wrap: {
-                defaultPos: 'mid-horizontal',
-                compatiblePos: ['mid-horizontal', 'bottom-center'], // 环绕式沿轮廓
                 defaultSubPos: 'inline',
                 compatibleSubPos: ['inline', 'below-main'],
                 defaultFontSize: 'large-small',
@@ -1750,6 +1785,10 @@
                 defaultFontStyle: 'light-elegant',
                 compatibleFontStyle: ['light-elegant', 'handwrite', 'sans-bold'],
                 defaultColor: 'brand-match',
+                defaultHAlign: 'center',
+                defaultVAlign: 'middle',
+                defaultLayer: 'background-blend',
+                defaultDivider: 'none',
             },
         };
 
@@ -1778,8 +1817,61 @@
             { id: 'emboss', label: '浮雕效果' }
         ];
 
+        // 水平对齐（上下结构时「左中右」）
+        const TITLE_HORIZONTAL_ALIGN = [
+            { id: 'left', label: '靠左' },
+            { id: 'center', label: '居中' },
+            { id: 'right', label: '靠右' }
+        ];
+
+        // 垂直对齐（左右结构时「上中下」）
+        const TITLE_VERTICAL_ALIGN = [
+            { id: 'top', label: '上对齐' },
+            { id: 'middle', label: '中置' },
+            { id: 'bottom', label: '下对齐' }
+        ];
+
+        // 前景/后景分层
+        const TITLE_LAYER_MODES = [
+            { id: 'foreground', label: '前景优先（文字压在图上）' },
+            { id: 'background-blend', label: '后景融合（文字融入背景）' },
+            { id: 'layered', label: '前后分层（衬底+文字）' }
+        ];
+
+        // 标题装饰分隔线
+        const TITLE_DIVIDER_STYLES = [
+            { id: 'none', label: '无分隔' },
+            { id: 'line', label: '横线分隔' },
+            { id: 'bracket', label: '括号装饰' },
+            { id: 'frame', label: '边框衬托' }
+        ];
+
         function getTitleLayout() {
-            return loadData(STORAGE_KEYS.TITLE_LAYOUT, { ...DEFAULT_TITLE_LAYOUT });
+            const saved = loadData(STORAGE_KEYS.TITLE_LAYOUT, { ...DEFAULT_TITLE_LAYOUT });
+            // 向后兼容：补全旧数据缺失的新字段
+            const defaults = DEFAULT_TITLE_LAYOUT;
+            let updated = false;
+            for (const key of Object.keys(defaults)) {
+                if (!(key in saved)) { saved[key] = defaults[key]; updated = true; }
+            }
+            // 向后兼容：迁移旧 mainTitlePos → horizontalAlign + verticalAlign
+            if (saved.mainTitlePos) {
+                const posMap = {
+                    'top-center':      { horizontalAlign: 'center', verticalAlign: 'top' },
+                    'top-left':        { horizontalAlign: 'left', verticalAlign: 'top' },
+                    'mid-horizontal':  { horizontalAlign: 'center', verticalAlign: 'middle' },
+                    'bottom-center':   { horizontalAlign: 'center', verticalAlign: 'bottom' }
+                };
+                const mapped = posMap[saved.mainTitlePos];
+                if (mapped) {
+                    saved.horizontalAlign = mapped.horizontalAlign;
+                    saved.verticalAlign = mapped.verticalAlign;
+                }
+                delete saved.mainTitlePos;
+                updated = true;
+            }
+            if (updated) saveData(STORAGE_KEYS.TITLE_LAYOUT, saved);
+            return saved;
         }
 
         function saveTitleLayout(layout) {
@@ -1818,13 +1910,36 @@
                 </div>
             `).join('');
 
-            // 主标题位置选项
-            const posOptions = [
-                { id: 'top-center', label: '顶部居中' },
-                { id: 'top-left', label: '顶部左侧' },
-                { id: 'mid-horizontal', label: '中部横排' },
-                { id: 'bottom-center', label: '底部居中' }
-            ];
+            // Render options row 1: 水平对齐 + 垂直对齐 + 分层（9种组合替代原 mainTitlePos）
+            const options = document.getElementById('titleLayoutOptions');
+            options.innerHTML = `
+                <div class="title-layout-row">
+                    <span class="row-label">水平</span>
+                    <select onchange="setTitleLayout('horizontalAlign', this.value)">
+                        ${TITLE_HORIZONTAL_ALIGN.map(h =>
+                            `<option value="${h.id}" ${layout.horizontalAlign === h.id ? 'selected' : ''}>${h.label}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div class="title-layout-row">
+                    <span class="row-label">垂直</span>
+                    <select onchange="setTitleLayout('verticalAlign', this.value)">
+                        ${TITLE_VERTICAL_ALIGN.map(v =>
+                            `<option value="${v.id}" ${layout.verticalAlign === v.id ? 'selected' : ''}>${v.label}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div class="title-layout-row">
+                    <span class="row-label">分层</span>
+                    <select onchange="setTitleLayout('layerMode', this.value)">
+                        ${TITLE_LAYER_MODES.map(lm =>
+                            `<option value="${lm.id}" ${layout.layerMode === lm.id ? 'selected' : ''}>${lm.label}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+            `;
+
+            // Render options row 2: 副标题 + 字号 + 配色 + 分隔线
             const subPosOptions = [
                 { id: 'below-main', label: '主标题下方' },
                 { id: 'corner-tag', label: '右下角标签' },
@@ -1836,16 +1951,8 @@
                 { id: 'large-only', label: '仅大标题' },
                 { id: 'medium-equal', label: '等大字号' }
             ];
-
-            // Render options row 1: 位置 + 副标题位置 + 字号 + 配色
-            const options = document.getElementById('titleLayoutOptions');
-            options.innerHTML = `
-                <div class="title-layout-row">
-                    <span class="row-label">位置</span>
-                    <select onchange="setTitleLayout('mainTitlePos', this.value)">
-                        ${_buildFilteredOptions(posOptions, layout.mainTitlePos, linkage.compatiblePos)}
-                    </select>
-                </div>
+            const options2 = document.getElementById('titleLayoutOptions2');
+            options2.innerHTML = `
                 <div class="title-layout-row">
                     <span class="row-label">副标题</span>
                     <select onchange="setTitleLayout('subtitlePos', this.value)">
@@ -1866,11 +1973,18 @@
                         ).join('')}
                     </select>
                 </div>
+                <div class="title-layout-row">
+                    <span class="row-label">分隔</span>
+                    <select onchange="setTitleLayout('dividerStyle', this.value)">
+                        ${TITLE_DIVIDER_STYLES.map(d =>
+                            `<option value="${d.id}" ${layout.dividerStyle === d.id ? 'selected' : ''}>${d.label}</option>`
+                        ).join('')}
+                    </select>
+                </div>
             `;
-
-            // Render options row 2: 字体风格 + 文字特效
-            const options2 = document.getElementById('titleLayoutOptions2');
-            options2.innerHTML = `
+            // Render options row 3: 字体风格 + 文字特效
+            const options3 = document.getElementById('titleLayoutOptions3');
+            options3.innerHTML = `
                 <div class="title-layout-row">
                     <span class="row-label">字体</span>
                     <select onchange="setTitleLayout('fontStyle', this.value)">
@@ -1903,9 +2017,6 @@
                 const linkage = TITLE_STYLE_LINKAGE[value];
                 if (linkage) {
                     // 只在当前值不在兼容范围内时才自动调整（避免覆盖用户手动调整）
-                    if (linkage.defaultPos && (!linkage.compatiblePos || !linkage.compatiblePos.includes(layout.mainTitlePos))) {
-                        layout.mainTitlePos = linkage.defaultPos;
-                    }
                     if (linkage.defaultSubPos && (!linkage.compatibleSubPos || !linkage.compatibleSubPos.includes(layout.subtitlePos))) {
                         layout.subtitlePos = linkage.defaultSubPos;
                     }
@@ -1918,6 +2029,10 @@
                     if (linkage.defaultColor) {
                         layout.colorScheme = linkage.defaultColor;
                     }
+                    if (linkage.defaultHAlign) layout.horizontalAlign = linkage.defaultHAlign;
+                    if (linkage.defaultVAlign) layout.verticalAlign = linkage.defaultVAlign;
+                    if (linkage.defaultLayer) layout.layerMode = linkage.defaultLayer;
+                    if (linkage.defaultDivider) layout.dividerStyle = linkage.defaultDivider;
                 }
             }
 
@@ -1973,16 +2088,21 @@
                 parts.push(styleKeywords[layout.style]);
             }
 
-            // === 第2层：位置描述（由细节配置决定，与风格互补而非冲突） ===
-            const posKeywords = {
-                'top-center': '标题文字置于画面顶部居中',
-                'top-left': '标题文字置于画面顶部左侧',
-                'mid-horizontal': '标题文字横向排列于画面中部',
-                'bottom-center': '标题文字置于画面底部居中'
+            // === 第2层：位置描述（由水平对齐 + 垂直对齐组合生成，9种覆盖场景） ===
+            const posMap = {
+                'left,top':       '标题文字置于画面顶部左侧',
+                'center,top':     '标题文字置于画面顶部居中',
+                'right,top':      '标题文字置于画面顶部右侧',
+                'left,middle':    '标题文字横向排列于画面中部靠左',
+                'center,middle':  '标题文字横向排列于画面正中',
+                'right,middle':   '标题文字横向排列于画面中部靠右',
+                'left,bottom':    '标题文字置于画面底部靠左',
+                'center,bottom':  '标题文字置于画面底部居中',
+                'right,bottom':   '标题文字置于画面底部靠右'
             };
-            if (posKeywords[layout.mainTitlePos]) {
-                parts.push(posKeywords[layout.mainTitlePos]);
-            }
+            const posKey = `${layout.horizontalAlign || 'center'},${layout.verticalAlign || 'top'}`;
+            const posDesc = posMap[posKey] || '标题文字居中排列';
+            parts.push(posDesc);
 
             // === 第3层：副标题位置 ===
             const subPosKeywords = {
@@ -2039,6 +2159,26 @@
             };
             if (colorKeywords[layout.colorScheme]) {
                 parts.push(colorKeywords[layout.colorScheme]);
+            }
+
+            // === 第7.5层：前景/后景分层 ===
+            const layerKeywords = {
+                'foreground': '文字位于画面最前景，压在图像之上',
+                'background-blend': '文字融入画面背景中，与图像自然融合',
+                'layered': '文字采用前后分层设计，上层主标题+底层衬底色块'
+            };
+            if (layout.layerMode !== 'foreground' && layerKeywords[layout.layerMode]) {
+                parts.push(layerKeywords[layout.layerMode]);
+            }
+
+            // === 第7.6层：装饰分隔线 ===
+            const dividerKeywords = {
+                'line': '标题下方添加横向装饰分隔线',
+                'bracket': '标题两侧添加括号装饰元素',
+                'frame': '标题区域添加边框衬托'
+            };
+            if (layout.dividerStyle !== 'none' && dividerKeywords[layout.dividerStyle]) {
+                parts.push(dividerKeywords[layout.dividerStyle]);
             }
 
             // === 第8层：标题内容描述 ===
@@ -2447,6 +2587,16 @@
                 ? new Set(parseVariables(formula.template).map(v => v.category))
                 : null;
 
+            // 动态更新词库面板标题，显示关联公式
+            const panelTitle = document.querySelector('.thesaurus-panel .panel-title');
+            if (panelTitle) {
+                if (formula) {
+                    panelTitle.innerHTML = `词库管理 — <span class="thesaurus-formula-badge" title="当前关联公式">${escapeHtml(formula.name)}</span>`;
+                } else {
+                    panelTitle.textContent = '词库管理（请选择公式）';
+                }
+            }
+
             // 过滤：有公式时只显示公式用到的分类，没有公式时显示全部
             let visibleCategories = formulaCategories
                 ? thesaurus.filter(cat => formulaCategories.has(cat.name))
@@ -2463,7 +2613,7 @@
             if (visibleCategories.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <p class="empty-state-text">${thesaurus.length === 0 ? '暂无词库分类' : '当前公式没有对应的词库分类'}</p>
+                        <p class="empty-state-text">${thesaurus.length === 0 ? '暂无词库分类' : (formula ? '当前公式没有对应的词库分类' : '请先在「结果输出」面板选择一个公式')}</p>
                     </div>
                 `;
                 return;
@@ -2495,6 +2645,7 @@
                             <button class="btn btn-ghost btn-sm" onclick="openAddWordModal('${cat.id}')" title="添加词汇">添加词汇</button>
                             <button class="btn btn-ghost btn-sm" onclick="saveCategoryAsDefault('${cat.id}')" title="将当前词库保存为默认值">设为默认</button>
                             <button class="btn btn-ghost btn-sm" onclick="resetSingleCategoryToDefault('${cat.id}')" title="恢复此分类到默认值">恢复</button>
+                            <button class="btn btn-ghost btn-sm btn-clear-words" onclick="clearCategoryWords('${cat.id}')" title="清空此分类下所有词汇">清空</button>
                         </div>
                     </div>
                     <div class="words-grid">
@@ -2593,8 +2744,26 @@
                 currentSelections[category] = arr;
             }
 
+            // 保存已展开面板状态，以便重绘后恢复
+            const expandedParents = [];
+            document.querySelectorAll('.word-children-panel.visible').forEach(panel => {
+                const parent = panel.getAttribute('data-parent');
+                if (parent) expandedParents.push(parent);
+            });
+
             // 更新UI
             renderCategories();
+
+            // 恢复已展开的子词汇面板
+            expandedParents.forEach(parentText => {
+                const panel = document.querySelector(`.word-children-panel[data-parent="${CSS.escape(parentText)}"]`);
+                if (panel) {
+                    panel.classList.add('visible');
+                    const arrow = panel.previousElementSibling?.querySelector('.word-expand-arrow');
+                    if (arrow) arrow.classList.add('expanded');
+                }
+            });
+
             updateResult();
         }
 
@@ -3714,6 +3883,26 @@ ${sampleStr}
             saveThesaurus(thesaurus);
             renderCategories();
             showToast(`「${category.name}」已恢复（${source}，${defaultWords.length}个词）`, 'success');
+        }
+
+        function clearCategoryWords(categoryId) {
+            const thesaurus = getThesaurus();
+            const cat = thesaurus.find(c => c.id === categoryId);
+            if (!cat) return;
+            if (cat.words.length === 0) {
+                showToast('该分类没有词汇可清空', 'info');
+                return;
+            }
+
+            if (!window.confirm(`确定要清空「${cat.name}」分类下的全部 ${cat.words.length} 个词汇吗？\n\n此操作不可撤销。清空后您可以自行添加自定义词汇。`)) {
+                return;
+            }
+
+            cat.words = [];
+            saveThesaurus(thesaurus);
+            renderCategories();
+            updateResult();
+            showToast(`「${cat.name}」词汇已清空，您可以添加自定义词汇`, 'success');
         }
 
         // ==================== Workspace ====================
@@ -6614,9 +6803,6 @@ ${sampleStr}
             renderOptStatusBar();
             updateFormulaSelect(); // 初始化公式选择器
 
-            // 自动切换到可用的模型（避免默认选中已耗尽的模型）
-            autoSwitchToAvailableModel();
-
             // 初始化尺寸控件状态（根据当前选中模型决定显示比例还是宽高）
             onModelChange();
 
@@ -6718,7 +6904,8 @@ ${sampleStr}
             const viewMap = {
                 'compose': 'viewCompose',
                 'image-prompt': 'viewImagePrompt',
-                'image-gen': 'viewImageGen'
+                'image-gen': 'viewImageGen',
+                'model-registry': 'viewModelRegistry'
             };
             const targetView = viewMap[viewName] || 'viewCompose';
             document.getElementById(targetView).classList.add('active');
@@ -6733,6 +6920,9 @@ ${sampleStr}
             }
             // 切换到图片生成视图时，渲染已有的历史记录
             if (viewName === 'image-gen') {
+                // 初始化模型注册中心（首次调用自动加载状态）
+                ModelRegistry.init();
+                renderModelSelect();
                 renderImageGenResults();
                 // 初始化画质提示
                 onQualityChange();
@@ -6747,6 +6937,11 @@ ${sampleStr}
                 }
                 // 初始调用一次，设置当前模型对应的控件状态
                 onModelChange();
+            }
+            // 切换到模型库视图时，渲染模型库
+            if (viewName === 'model-registry') {
+                ModelRegistry.init();
+                renderModelRegistryView();
             }
         }
 
@@ -7989,9 +8184,17 @@ ${keywordsList}
         }
 
         function copyImageHistoryItem(id) {
+            if (!id || isNaN(id)) {
+                showToast('记录 ID 无效，请刷新后重试', 'warning');
+                return;
+            }
             const history = getImageHistory();
             const item = history.find(h => h.id === id);
-            if (item) copyText(item.desc, '已复制到剪贴板');
+            if (item) {
+                copyText(item.desc, '已复制到剪贴板');
+            } else {
+                showToast('该记录已不存在', 'warning');
+            }
         }
 
         function deleteImageHistoryItem(id) {
@@ -8011,7 +8214,8 @@ ${keywordsList}
         const IMAGE_GEN_HISTORY_KEY = 'prompt_tool_image_gen_history';
         let imageGenHistory = [];
         let _isImageGenRunning = false;
-        let _imageGenRetried = false;
+        let _imageGenFallbackInProgress = false;
+        let _imageGenLastFailedModel = null;
 
         // Provider & Model 定义
         // 辅助：宽高 → 最简比例
@@ -8088,47 +8292,70 @@ ${keywordsList}
 
         function onModelChange() {
             const rawModel = document.getElementById('imageGenModel').value;
-            const { modelId } = parseModelValue(rawModel);
+            const { provider, modelId } = parseModelValue(rawModel);
+            const isPollinations = provider === 'pollinations';
             const supportsExact = modelSupportsExactSize(modelId);
             const customRow = document.getElementById('imageGenCustomRow');
             const ratioRow = document.getElementById('imageGenRatioRow');
             const sizeLabel = document.getElementById('imageGenSizeLabel');
             const sizeHint = document.getElementById('imageGenSizeHint');
+            const native = getModelNativeSize(modelId);
 
-            if (!supportsExact) {
-                // 仅支持比例的模型：隐藏自定义尺寸，只显示比例按钮
+            const presetsRow = document.getElementById('imageGenPresetsRow');
+
+            // 三种尺寸控制模式
+            if (isPollinations) {
+                // 【Pollinations】API 完全不接收尺寸，整体置灰
                 customRow.style.display = 'none';
                 ratioRow.style.display = 'flex';
+                ratioRow.classList.add('ratio-row-muted');
+                presetsRow.style.display = 'none';
                 sizeHint.style.display = 'block';
+                sizeHint.className = 'image-gen-size-hint locked';
+                sizeHint.textContent = `🔒 固定原生尺寸 ${native.width}×${native.height}  ·  API 不接收宽高参数`;
+                sizeLabel.textContent = `${native.width}×${native.height}`;
+            } else if (!supportsExact) {
+                // 【GPT/DALL·E】仅支持比例，不支持自定义像素
+                customRow.style.display = 'none';
+                ratioRow.style.display = 'flex';
+                ratioRow.classList.remove('ratio-row-muted');
+                presetsRow.style.display = (loadCustomPresets().length > 0) ? 'flex' : 'none';
+                sizeHint.style.display = 'block';
+                sizeHint.className = 'image-gen-size-hint ratio-only';
                 sizeHint.textContent = '💡 此模型仅支持比例，实际尺寸由 API 决定';
             } else {
-                // 支持精确尺寸的模型：全部可用
+                // 【Puter 其他】精确尺寸 + 比例 全可用
                 customRow.style.display = 'flex';
                 ratioRow.style.display = 'flex';
+                ratioRow.classList.remove('ratio-row-muted');
+                presetsRow.style.display = (loadCustomPresets().length > 0) ? 'flex' : 'none';
                 sizeHint.style.display = 'none';
+                sizeHint.className = 'image-gen-size-hint';
             }
 
             // 切换模型时，除非用户已手动选定尺寸，否则重置为模型原生尺寸
             if (!_imageGenUserSetSize) {
-                const native = getModelNativeSize(modelId);
                 setImageGenSize(native.width, native.height);
                 _imageGenActiveRatio = null;
-                // 取消所有比例按钮的高亮（因为现在是模型原生尺寸）
+                // 取消所有比例按钮的高亮
                 document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
                 // 清空自定义输入框
                 document.getElementById('imgGenCustomWidth').value = '';
                 document.getElementById('imgGenCustomHeight').value = '';
             } else if (_imageGenActiveRatio) {
-                // 用户选了比例：保持比例标签，不显示像素值
-                sizeLabel.textContent = _imageGenActiveRatio;
-                sizeHint.style.display = 'block';
-                sizeHint.textContent = '💡 API 自行决定实际尺寸';
+                // 用户选了比例：保持比例标签
+                if (isPollinations) {
+                    sizeLabel.textContent = `${native.width}×${native.height}`;
+                } else {
+                    sizeLabel.textContent = _imageGenActiveRatio;
+                }
             } else {
-                // 保留用户设置的尺寸，只更新标签
-                const native = getModelNativeSize(modelId);
+                // 保留用户设置的尺寸
                 const w = parseInt(document.getElementById('imageGenWidth').value) || native.width;
                 const h = parseInt(document.getElementById('imageGenHeight').value) || native.height;
-                if (supportsExact) {
+                if (isPollinations) {
+                    sizeLabel.textContent = `${native.width}×${native.height}`;
+                } else if (supportsExact) {
                     sizeLabel.textContent = `${w}×${h}`;
                 } else {
                     const r = computeRatio(w, h);
@@ -8138,99 +8365,414 @@ ${keywordsList}
         }
 
 
-        // 模型额度管理
-        const MODEL_QUOTA_STATUS = {
-            'gpt-image-2': { exhausted: true, message: '免费额度已用完' },
-            'gpt-image-1.5': { exhausted: true, message: '免费额度已用完' },
-            'gpt-image-1': { exhausted: true, message: '免费额度已用完' },
-            'gpt-image-1-mini': { exhausted: true, message: '免费额度已用完' }
-        };
+        // 模型额度管理 — 已迁移至 ModelRegistry
+        // 以下函数保留为兼容适配器
 
         // 检查模型额度状态
         function checkModelQuota(modelId) {
-            if (MODEL_QUOTA_STATUS[modelId] && MODEL_QUOTA_STATUS[modelId].exhausted) {
-                return {
-                    available: false,
-                    message: MODEL_QUOTA_STATUS[modelId].message
-                };
+            const m = ModelRegistry.get(modelId);
+            if (m && m.status !== 'active') {
+                return { available: false, message: m.statusReason || '不可用' };
             }
             return { available: true };
         }
 
-        // 自动切换到可用的模型（从所有 provider 中选最佳可用模型）
-        function autoSwitchToAvailableModel() {
-            const select = document.getElementById('imageGenModel');
-            if (!select) return;
-            
-            // 优先在同一 provider 内切换，否则跨 provider 切换
-            const currentVal = select.value;
-            const currentProvider = currentVal.includes('::') ? currentVal.split('::')[0] : '';
-            
-            // 优先级：当前 provider 内可用模型 → 另一个 provider 的可用模型 → 任何可用模型
-            const getAvailable = (providerFilter) => {
-                const candidates = [];
-                for (const option of select.options) {
-                    if (option.disabled || option.value.startsWith('_')) continue;
-                    if (providerFilter && !option.value.startsWith(providerFilter + '::') && option.value !== providerFilter) continue;
-                    candidates.push(option);
-                }
-                return candidates;
-            };
-            
-            // 尝试1: 同一 provider 内切换
-            if (currentProvider) {
-                const sameProvider = getAvailable(currentProvider);
-                if (sameProvider.length > 0) {
-                    select.value = sameProvider[0].value;
-                    showToast(`已自动切换到: ${sameProvider[0].text}`, 'info');
-                    return;
-                }
-            }
-            
-            // 尝试2: 跨 provider 切换到 Pollinations（如果当前是 Puter）
-            const otherProvider = currentProvider === 'puter' ? 'pollinations' : 'puter';
-            const otherOptions = getAvailable(otherProvider);
-            if (otherOptions.length > 0) {
-                select.value = otherOptions[0].value;
-                showToast(`🔄 已切换到 ${otherProvider === 'pollinations' ? 'Pollinations' : 'Puter.js'}: ${otherOptions[0].text}`, 'info');
-                return;
-            }
-            
-            // 尝试3: 任何可用模型
-            const anyAvailable = getAvailable(null);
-            if (anyAvailable.length > 0) {
-                select.value = anyAvailable[0].value;
-                showToast(`已自动切换到: ${anyAvailable[0].text}`, 'info');
-                return;
-            }
-            
-            // 所有模型都不可用
-            showToast('⚠️ 所有模型额度已耗尽，请稍后再试', 'warning', 5000);
-        }
-
-
-
         // 标记模型额度耗尽
         function markModelExhausted(modelId, message) {
-            MODEL_QUOTA_STATUS[modelId] = {
-                exhausted: true,
-                message: message || '免费额度已用完'
-            };
-            
-            // 更新 UI
+            ModelRegistry.markExhausted(modelId, message);
+            // 立即更新 UI 下拉菜单
+            renderModelSelect();
+        }
+
+        // 从 ModelRegistry 动态渲染模型下拉菜单（仅显示可用模型）
+        function renderModelSelect() {
             const select = document.getElementById('imageGenModel');
-            if (select) {
-                Array.from(select.options).forEach(option => {
-                    if (option.value.includes(`::${modelId}`) || option.value === modelId) {
-                        option.disabled = true;
-                        if (!option.text.includes('[❌')) {
-                            option.text = option.text.replace(/\s*\[.*?\]/, '') + ` [❌ ${message || '额度已耗尽'}]`;
-                        }
-                    }
+            if (!select) return;
+
+            // 记住当前选中值
+            const prevValue = select.value;
+
+            // 按分组整理并生成选项
+            const groups = ModelRegistry.getGrouped(true); // onlyActive=true
+
+            select.innerHTML = '';
+            let firstActiveValue = '';
+
+            Object.keys(groups).forEach(groupName => {
+                const g = groups[groupName];
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = `${g.icon} ${groupName}`;
+
+                g.models.forEach(m => {
+                    const option = document.createElement('option');
+                    option.value = `${m.provider}::${m.id}`;
+                    option.textContent = `${m.name} — ${m.desc}`;
+                    if (!firstActiveValue) firstActiveValue = option.value;
+                    optgroup.appendChild(option);
                 });
+
+                select.appendChild(optgroup);
+            });
+
+            // 恢复之前的选择，如果之前的模型已不可用则选第一个
+            if (prevValue && select.querySelector(`option[value="${prevValue}"]`)) {
+                select.value = prevValue;
+            } else {
+                select.value = firstActiveValue;
             }
-            
-            console.warn(`[Quota] 模型 ${modelId} 额度已耗尽：${message || '免费额度已用完'}`);
+        }
+
+        // ==================== 模型库视图 ====================
+        let _mrFilterGroupInitDone = false;
+
+        function renderModelRegistryView() {
+            ModelRegistry.init();
+            const allModels = ModelRegistry.getAll();
+
+            // 初始化分组筛选器（仅一次）
+            if (!_mrFilterGroupInitDone) {
+                const groupSel = document.getElementById('mrFilterGroup');
+                if (groupSel) {
+                    const groups = new Set(allModels.map(m => m.group));
+                    groups.forEach(g => {
+                        const opt = document.createElement('option');
+                        opt.value = g; opt.textContent = g;
+                        groupSel.appendChild(opt);
+                    });
+                }
+                _mrFilterGroupInitDone = true;
+            }
+
+            // 读取筛选条件
+            const filterStatus = document.getElementById('mrFilterStatus')?.value || 'all';
+            const filterProvider = document.getElementById('mrFilterProvider')?.value || 'all';
+            const filterGroup = document.getElementById('mrFilterGroup')?.value || 'all';
+            const searchTerm = (document.getElementById('mrSearch')?.value || '').toLowerCase().trim();
+
+            // 筛选模型
+            let filtered = allModels;
+            if (filterStatus === 'deleted') {
+                // 已删除的模型（内置模型被标记删除）
+                filtered = ModelRegistry.getDeletedModels();
+            } else if (filterStatus !== 'all') {
+                filtered = filtered.filter(m => m.status === filterStatus);
+            }
+            if (filterProvider !== 'all') filtered = filtered.filter(m => m.provider === filterProvider);
+            if (filterGroup !== 'all') filtered = filtered.filter(m => m.group === filterGroup);
+            if (searchTerm) filtered = filtered.filter(m => m.name.toLowerCase().includes(searchTerm) || m.id.toLowerCase().includes(searchTerm));
+
+            // 更新统计
+            const countActive = allModels.filter(m => m.status === 'active').length;
+            const countExhausted = allModels.filter(m => m.status === 'exhausted').length;
+            const countOffline = allModels.filter(m => m.status === 'offline').length;
+
+            const elAll = document.getElementById('mrCountAll');
+            const elActive = document.getElementById('mrCountActive');
+            const elExhausted = document.getElementById('mrCountExhausted');
+            const elOffline = document.getElementById('mrCountOffline');
+            if (elAll) elAll.textContent = allModels.length;
+            if (elActive) elActive.textContent = countActive;
+            if (elExhausted) elExhausted.textContent = countExhausted;
+            if (elOffline) elOffline.textContent = countOffline;
+            if (document.getElementById('mrStatAll')) document.getElementById('mrStatAll').style.display = countActive + countExhausted + countOffline > 0 ? '' : 'none';
+
+            // 渲染官网快捷入口
+            renderMRWebsites(allModels);
+
+            // 渲染表格
+            const tbody = document.getElementById('mrTableBody');
+            if (!tbody) return;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="mr-empty">没有匹配的模型</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(m => {
+                // 状态标识
+                let statusBadge = '', statusReasonHtml = '';
+                const isDel = ModelRegistry.isDeleted(m.id);
+                if (isDel) {
+                    statusBadge = '<span class="mr-badge mr-badge-offline">🗑 已删除</span>';
+                    statusReasonHtml = m.statusReason ? `<div class="mr-reason">${escapeHtml(m.statusReason)}</div>` : '';
+                } else if (m.status === 'active') statusBadge = '<span class="mr-badge mr-badge-active">🟢 可用</span>';
+                else if (m.status === 'exhausted') {
+                    statusBadge = '<span class="mr-badge mr-badge-exhausted">🟡 耗尽</span>';
+                    statusReasonHtml = m.statusReason ? `<div class="mr-reason">${escapeHtml(m.statusReason)}</div>` : '';
+                } else if (m.status === 'offline') {
+                    statusBadge = '<span class="mr-badge mr-badge-offline">🔴 下线</span>';
+                    statusReasonHtml = m.statusReason ? `<div class="mr-reason">${escapeHtml(m.statusReason)}</div>` : '';
+                }
+
+                // 收费
+                const pricingHtml = m.pricing === 'free' ? '<span class="mr-badge mr-badge-free">免费</span>' : '<span class="mr-badge mr-badge-paid">付费</span>';
+
+                // 地区
+                const regionMap = { global: '🌍 全球', china: '🇨🇳 中国', us: '🇺🇸 美国' };
+                const regionHtml = regionMap[m.region] || m.region;
+
+                // 约束
+                const constraints = [];
+                if (m.isRatioOnly) constraints.push('仅比例');
+                if (m.widthMultipleOf) constraints.push(`宽×${m.widthMultipleOf}`);
+                const constraintsHtml = constraints.length > 0 ? constraints.join(' · ') : '无';
+
+                // 操作按钮
+                const actionsHtml = buildMRActions(m, m.status);
+
+                // 官网链接
+                const websiteHtml = m.website ? `<a href="${m.website}" target="_blank" rel="noopener" class="mr-website-link" title="访问 ${m.websiteLabel || '官网'}">↗</a>` : '';
+
+                return `<tr class="mr-row mr-row-${m.status}">
+                    <td class="mr-cell-name">
+                        <div class="mr-name-line">
+                            <span class="mr-provider-dot" data-provider="${m.provider}"></span>
+                            <strong>${escapeHtml(m.name)}</strong>${websiteHtml}
+                        </div>
+                        <div class="mr-name-id">${escapeHtml(m.id)}</div>
+                    </td>
+                    <td class="mr-cell-group">
+                        <span class="mr-group-tag">${m.groupIcon} ${escapeHtml(m.group)}</span>
+                        <div class="mr-provider-tag">${m.provider === 'pollinations' ? '📡 Pollinations' : '☁️ Puter.js'}</div>
+                    </td>
+                    <td class="mr-cell-status">
+                        ${statusBadge}
+                        ${statusReasonHtml}
+                    </td>
+                    <td class="mr-cell-res">${m.maxResolution}px<br><span class="mr-native">原生 ${m.nativeSize.w}×${m.nativeSize.h}</span></td>
+                    <td class="mr-cell-pricing">${pricingHtml}</td>
+                    <td class="mr-cell-region">${regionHtml}</td>
+                    <td class="mr-cell-constraints">${constraintsHtml}</td>
+                    <td class="mr-cell-actions">${actionsHtml}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function buildMRActions(m, currentStatus) {
+            const parts = [];
+            const isDeleted = ModelRegistry.isDeleted(m.id);
+            if (isDeleted) {
+                // 已删除模型：恢复 + 永久删除
+                parts.push(`<button class="mr-action-btn mr-action-restore" onclick="window._mrRestoreModel('${m.id}')" title="撤销删除">↩</button>`);
+                parts.push(`<button class="mr-action-btn mr-action-delete" onclick="window._mrPermanentDelete('${m.id}')" title="永久删除">💀</button>`);
+                return parts.join('');
+            }
+            if (currentStatus === 'active') {
+                parts.push(`<button class="mr-action-btn mr-action-exhaust" onclick="window._mrMarkExhausted('${m.id}')" title="标记为耗尽">⏸</button>`);
+            } else if (currentStatus === 'exhausted') {
+                parts.push(`<button class="mr-action-btn mr-action-restore" onclick="window._mrClearStatus('${m.id}')" title="恢复可用">▶</button>`);
+            }
+            if (currentStatus === 'offline') {
+                parts.push(`<button class="mr-action-btn mr-action-restore" onclick="window._mrClearStatus('${m.id}')" title="重新启用">▶</button>`);
+            }
+            return parts.join('');
+        }
+
+        // 全局回调（供 onclick 使用）
+        window._mrMarkExhausted = function(modelId) {
+            ModelRegistry.markExhausted(modelId, '手动标记为耗尽');
+            renderModelRegistryView();
+            renderModelSelect(); // 同步更新图片生成的下拉菜单
+            showToast('模型已标记为耗尽', 'warning');
+        };
+        window._mrClearStatus = function(modelId) {
+            // 如果模型被删除，同时恢复
+            if (ModelRegistry.isDeleted(modelId)) {
+                ModelRegistry.restoreModel(modelId);
+            }
+            ModelRegistry.clearStatus(modelId);
+            renderModelRegistryView();
+            renderModelSelect();
+            showToast('模型状态已恢复', 'success');
+        };
+
+        window._mrRestoreModel = function(modelId) {
+            ModelRegistry.restoreModel(modelId);
+            renderModelRegistryView();
+            renderModelSelect();
+            showToast('模型已恢复', 'success');
+        };
+
+        window._mrPermanentDelete = function(modelId) {
+            _confirmCallback = function() {
+                ModelRegistry.permanentDelete(modelId);
+                renderModelRegistryView();
+                renderModelSelect();
+                showToast('模型已永久删除', 'warning');
+            };
+            const overlay = document.getElementById('confirmOverlay');
+            const msg = document.getElementById('confirmMessage');
+            if (overlay && msg) {
+                msg.textContent = '永久删除后无法恢复，确定继续？';
+                overlay.style.display = 'flex';
+            }
+        };
+
+        // ==================== 模型库刷新 ====================
+        window._refreshAborted = false;
+
+        async function refreshModelRegistry() {
+            const modal = document.getElementById('modelRefreshModal');
+            const phaseEl = document.getElementById('mrRefreshPhase');
+            const detailEl = document.getElementById('mrRefreshDetail');
+            const progressDiv = document.getElementById('mrRefreshProgress');
+            const resultDiv = document.getElementById('mrRefreshResult');
+            const cancelBtn = document.getElementById('mrRefreshCancelBtn');
+            const closeBtn = document.getElementById('modelRefreshClose');
+            const footer = document.getElementById('modelRefreshFooter');
+            const btn = document.getElementById('mrRefreshBtn');
+
+            if (!modal) return;
+            window._refreshAborted = false;
+
+            // 重置 UI
+            modal.style.display = 'flex';
+            progressDiv.style.display = 'block';
+            resultDiv.style.display = 'none';
+            resultDiv.innerHTML = '';
+            phaseEl.textContent = '正在连接...';
+            detailEl.textContent = '';
+            cancelBtn.textContent = '取消';
+            cancelBtn.className = 'btn btn-secondary';
+            closeBtn.style.display = 'none';
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ 刷新中...'; }
+
+            const onProgress = (phase, detail) => {
+                if (window._refreshAborted) return;
+                const map = {
+                    'fetch': '📡 获取上游数据',
+                    'add': '➕ 添加新模型',
+                    'probe': '🔍 探测可用性',
+                    'error': '⚠️ 错误',
+                    'done': '✅ 完成'
+                };
+                phaseEl.textContent = map[phase] || phase;
+                detailEl.textContent = detail || '';
+            };
+
+            try {
+                const report = await ModelRegistry.refreshFromUpstream(onProgress);
+
+                if (window._refreshAborted) return;
+
+                // 构建结果 HTML
+                const lines = [];
+                const totalChanges = report.added.length + (report.markedOffline?.length || 0) + (report.restored?.length || 0);
+
+                if (totalChanges === 0 && report.errors.length === 0) {
+                    lines.push('<div class="mr-refresh-ok">✅ 模型库已是最新，无需更新</div>');
+                } else {
+                    if (report.added.length > 0) {
+                        lines.push(`<div class="mr-refresh-section"><div class="mr-refresh-section-title">➕ 新增模型 (${report.added.length})</div>`);
+                        lines.push('<ul class="mr-refresh-list">');
+                        report.added.forEach(m => {
+                            lines.push(`<li><strong>${escapeHtml(m.name)}</strong> <code>${escapeHtml(m.id)}</code></li>`);
+                        });
+                        lines.push('</ul></div>');
+                    }
+                    if (report.markedOffline && report.markedOffline.length > 0) {
+                        lines.push(`<div class="mr-refresh-section"><div class="mr-refresh-section-title">🔴 已下架 (${report.markedOffline.length})</div>`);
+                        lines.push('<ul class="mr-refresh-list">');
+                        report.markedOffline.forEach(m => {
+                            lines.push(`<li><strong>${escapeHtml(m.name)}</strong> <code>${escapeHtml(m.id)}</code> — 上游已移除</li>`);
+                        });
+                        lines.push('</ul></div>');
+                    }
+                    if (report.restored && report.restored.length > 0) {
+                        lines.push(`<div class="mr-refresh-section"><div class="mr-refresh-section-title">🟢 已恢复 (${report.restored.length})</div>`);
+                        lines.push('<ul class="mr-refresh-list">');
+                        report.restored.forEach(m => {
+                            lines.push(`<li><strong>${escapeHtml(m.name)}</strong> <code>${escapeHtml(m.id)}</code> — 重新可用</li>`);
+                        });
+                        lines.push('</ul></div>');
+                    }
+                }
+
+                if (report.errors.length > 0) {
+                    lines.push(`<div class="mr-refresh-section"><div class="mr-refresh-section-title" style="color:var(--error)">⚠️ 错误 (${report.errors.length})</div>`);
+                    lines.push('<ul class="mr-refresh-list">');
+                    report.errors.forEach(e => lines.push(`<li>${escapeHtml(e)}</li>`));
+                    lines.push('</ul></div>');
+                }
+
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = lines.join('');
+                phaseEl.textContent = '刷新完成';
+                detailEl.textContent = `新增 ${report.added.length} · 下架 ${report.markedOffline?.length || 0} · 恢复 ${report.restored?.length || 0}`;
+                cancelBtn.textContent = '关闭';
+                cancelBtn.className = 'btn btn-primary';
+                closeBtn.style.display = 'block';
+
+                // 刷新表格
+                renderModelRegistryView();
+                renderModelSelect();
+                if (totalChanges > 0) {
+                    showToast(`模型库已更新：新增 ${report.added.length}，下架 ${report.markedOffline?.length || 0}，恢复 ${report.restored?.length || 0}`, 'success');
+                }
+            } catch (e) {
+                if (window._refreshAborted) return;
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `<div class="mr-refresh-error">❌ 刷新失败: ${escapeHtml(e.message)}</div>`;
+                phaseEl.textContent = '刷新失败';
+                cancelBtn.textContent = '关闭';
+                cancelBtn.className = 'btn btn-primary';
+                closeBtn.style.display = 'block';
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = '🔄 刷新模型库'; }
+            }
+        }
+
+        function closeModelRefreshModal() {
+            window._refreshAborted = true;
+            const modal = document.getElementById('modelRefreshModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function renderMRWebsites(allModels) {
+            const grid = document.getElementById('mrWebsitesGrid');
+            if (!grid) return;
+
+            // 收集唯一的官网：按 URL 去重
+            const seen = new Set();
+            const sites = [];
+            allModels.forEach(m => {
+                if (!m.website) return;
+                const key = m.website;
+                if (seen.has(key)) return;
+                seen.add(key);
+
+                let icon = '';
+                if (m.group === 'Google') icon = '🔮';
+                else if (m.group === 'OpenAI') icon = '🤖';
+                else if (m.group === 'Flux') icon = '🌪️';
+                else if (m.group === 'xAI') icon = '🚀';
+                else if (m.group === 'Ideogram') icon = '✍️';
+                else if (m.group === 'Juggernaut') icon = '⚡';
+                else if (m.group === 'Stable Diffusion') icon = '🎨';
+                else if (m.group === 'Wan') icon = '🎬';
+                else if (m.group === 'Seedream') icon = '🌱';
+                else if (m.group === 'Qwen 2') icon = '🧧';
+                else if (m.group === '开源模型') icon = '🆓';
+                else if (m.group.includes('Flux')) icon = '🌪️';
+                else icon = '📡';
+
+                sites.push({ label: m.websiteLabel, url: m.website, icon, group: m.group });
+            });
+
+            // 按分组排序
+            sites.sort((a, b) => a.label.localeCompare(b.label));
+
+            grid.innerHTML = sites.map(s => {
+                const active = allModels.some(m => m.website === s.url && m.status === 'active');
+                const statusDot = active ? '🟢' : '⭕';
+                return `<a href="${s.url}" target="_blank" rel="noopener" class="mr-website-card" title="${s.label} 官网">
+                    <span class="mr-ws-icon">${s.icon}</span>
+                    <span class="mr-ws-label">${escapeHtml(s.label)}</span>
+                    <span class="mr-ws-dot">${statusDot}</span>
+                </a>`;
+            }).join('');
         }
 
         // 注意：不再对生成后的图片做 Canvas 重绘/裁剪。
@@ -8284,7 +8826,15 @@ ${keywordsList}
                         }
                         throw new Error(`[限流] Pollinations 免费队列已满，请切换到 Puter.js 模型重试`);
                     }
-                    if (!resp.ok) throw new Error(`[HTTP ${resp.status}] Pollinations 服务异常`);
+                    if (!resp.ok) {
+                        // 5xx 服务端错误 / 其他非临时错误 — 可能模型已下架
+                        const errMsg = `[HTTP ${resp.status}] Pollinations 服务异常`;
+                        // 500/503/502 等持续错误 → 标记模型为耗尽，防止用户反复点击
+                        if (resp.status >= 500) {
+                            markModelExhausted(modelId, `Pollinations 返回 ${resp.status}，疑似模型不可用`);
+                        }
+                        throw new Error(errMsg);
+                    }
                     const blob = await resp.blob();
                     if (blob.size < 100) throw new Error('Pollinations 返回了空图片');
 
@@ -8342,14 +8892,23 @@ ${keywordsList}
                     };
                     const _doGenerate = async (extraOpts) => {
                         // Puter.js API 参数策略：
-                        // GPT/DALL-E 系列只支持 ratio（传入简化比例字符串）；其他模型用 width/height
+                        // 仅支持比例的模型用 ratio；其他模型用 width/height
                         const options = { model: modelId };
+                        const ratioOnly = ModelRegistry.isRatioOnly(modelId);
                         
-                        if (modelId.includes('gpt-image') || modelId.includes('dall-e')) {
+                        if (ratioOnly) {
                             options.ratio = ratioStr;
                         } else {
-                            options.width = width;
-                            options.height = height;
+                            // 检查是否需要对齐倍数（如 Qwen 要求 8 的倍数）
+                            const multiple = ModelRegistry.getWidthMultipleOf(modelId);
+                            if (multiple) {
+                                const maxRes = ModelRegistry.getMaxResolution(modelId);
+                                options.width = Math.min(maxRes, Math.ceil((width || 1024) / multiple) * multiple);
+                                options.height = Math.min(maxRes, Math.ceil((height || 1024) / multiple) * multiple);
+                            } else {
+                                options.width = width;
+                                options.height = height;
+                            }
                         }
                         
                         if (seed != null) options.seed = seed;
@@ -8363,7 +8922,9 @@ ${keywordsList}
                         if (img.src.startsWith('data:')) {
                             return img.src;
                         }
-                        const resp = await fetch(img.src);
+                        // 通过服务端代理下载图片，绕过浏览器 CORS 限制
+                        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(img.src)}`;
+                        const resp = await fetch(proxyUrl);
                         if (!resp.ok) throw new Error(`Puter 图片下载失败 HTTP ${resp.status}`);
                         const blob = await resp.blob();
                         return new Promise((resolve, reject) => {
@@ -8540,6 +9101,13 @@ ${keywordsList}
                 showToast('请输入有效尺寸（64-4096）', 'warning');
                 return;
             }
+            // 检查当前模型是否支持自定义尺寸
+            const rawModel = document.getElementById('imageGenModel')?.value || '';
+            const { provider, modelId } = parseModelValue(rawModel);
+            if (provider === 'pollinations' || !modelSupportsExactSize(modelId)) {
+                showToast('⚠️ 当前模型不支持自定义尺寸', 'warning');
+                return;
+            }
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             setImageGenSize(w, h);
             _imageGenActiveRatio = null; // 自定义尺寸覆盖比例选择
@@ -8571,6 +9139,11 @@ ${keywordsList}
         }
 
         function selectPreset(btn) {
+            // Pollinations 模型不接收尺寸
+            const rawModel = document.getElementById('imageGenModel')?.value || '';
+            const { provider } = parseModelValue(rawModel);
+            if (provider === 'pollinations') return;
+            
             const w = parseInt(btn.dataset.w);
             const h = parseInt(btn.dataset.h);
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
@@ -8593,86 +9166,19 @@ ${keywordsList}
         }
 
         // ==================== 画质参数映射 ====================
-        // 注意：Puter.js 作为中间层，仅支持 quality 参数。
-        // output_quality / steps / prompt_upsampling 是 Replicate 原生参数，
-        // 通过 Puter.js 传递会引发错误，因此移除了这些参数。
+        // 已迁移至 ModelRegistry，此处保留为兼容适配器
         function getQualityParams(modelId, qualityLevel) {
-            const opts = {};
-            const id = (modelId || '').toLowerCase();
-
-            // === OpenAI 模型 (Puter.js 原生支持 quality 参数) ===
-            if (id.startsWith('gpt-image-2')) {
-                opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'auto';
-            } else if (id.startsWith('gpt-image-')) {
-                opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'high';
-            } else if (id === 'dall-e-3' || id === 'dall-e-2') {
-                opts.quality = qualityLevel === 'high' ? 'hd' : 'standard';
-            }
-
-            // === Gemini / Imagen 模型: 通过 Puter.js 传递 quality ===
-            if (id.startsWith('gemini-') || id.includes('imagen') || id.includes('flash-image')) {
-                opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'high';
-            }
-
-            // === 其他模型 (Flux / SD / Ideogram / Seedream 等 Replicate 模型) ===
-            // 通过 Puter.js 调用时，只传 quality 参数，让 Puter.js 内部映射
-            if (id.includes('flux') || id.includes('stable-diffusion') || id.includes('sd-') ||
-                id.includes('sd3') || id.includes('sdxl') ||
-                id.includes('ideogram') || id.includes('dreamshaper') ||
-                id.includes('qwen') || id.includes('seedream') || id.includes('hidream') ||
-                id.includes('juggernaut') || id.includes('krea') || id.includes('kontext') || id.includes('canny')) {
-                opts.quality = qualityLevel === 'fast' ? 'low' : qualityLevel === 'standard' ? 'medium' : 'high';
-            }
-
-            return Object.keys(opts).length > 0 ? opts : null;
+            return ModelRegistry.getQualityParams(modelId, qualityLevel);
         }
 
-        // 获取模型支持的最大分辨率（用于智能尺寸解析）
+        // 获取模型支持的最大分辨率（已迁移至 ModelRegistry）
         function getModelMaxResolution(modelId) {
-            const id = (modelId || '').toLowerCase();
-            // Pollinations 新模型
-            if (id === 'flux' || id === 'zimage' || id === 'klein') return 1440;
-            if (id === 'seedream' || id === 'qwen-image' || id === 'grok-imagine') return 2048;
-            if (id.includes('ideogram')) return 2048;
-            if (id.includes('nanobanana')) return 1024;
-            // Puter.js 模型
-            if (id.startsWith('gemini-') || id.includes('imagen')) return 4096;
-            if (id.includes('flux-1.1-pro')) return 2048;
-            if (id.includes('flux-schnell')) return 1440;
-            if (id.includes('seedream')) return 2048;
-            if (id.includes('hidream')) return 2048;
-            if (id.startsWith('gpt-image-2')) return 2048;
-            return 2048; // 默认上限
+            return ModelRegistry.getMaxResolution(modelId);
         }
 
-        // 每个模型的原生/推荐尺寸（按模型定义，不做换算）
+        // 每个模型的原生/推荐尺寸（已迁移至 ModelRegistry）
         function getModelNativeSize(modelId) {
-            const id = (modelId || '').toLowerCase();
-            // Pollinations 系列
-            if (id === 'flux') return { width: 1024, height: 1024 };
-            if (id === 'zimage') return { width: 1024, height: 1024 };
-            if (id === 'seedream') return { width: 1024, height: 1024 };
-            if (id === 'klein') return { width: 1024, height: 1024 };
-            if (id === 'qwen-image') return { width: 1328, height: 1328 };
-            if (id === 'grok-imagine') return { width: 1024, height: 1024 };
-            if (id.includes('ideogram')) return { width: 1024, height: 1024 };
-            if (id.includes('nanobanana')) return { width: 512, height: 512 };
-            // Puter OpenAI（仅支持比例，但给原生默认像素值）
-            if (id.startsWith('gpt-image') || id.includes('dall-e')) return { width: 1024, height: 1024 };
-            // Puter Google
-            if (id.startsWith('gemini-') || id.includes('imagen') || id.includes('flash-image')) return { width: 1024, height: 1024 };
-            // Puter Flux
-            if (id.includes('flux-1.1-pro')) return { width: 1440, height: 1440 };
-            if (id.includes('flux-schnell')) return { width: 1024, height: 1024 };
-            // Puter SDXL
-            if (id.includes('stable-diffusion')) return { width: 1024, height: 1024 };
-            // Puter 其他
-            if (id.includes('dreamshaper')) return { width: 1024, height: 1024 };
-            if (id.includes('hidream')) return { width: 1024, height: 1024 };
-            if (id.includes('qwen')) return { width: 1328, height: 1328 };
-            if (id.includes('seedream') || id.includes('bytedance')) return { width: 1024, height: 1024 };
-            // 兜底
-            return { width: 1024, height: 1024 };
+            return ModelRegistry.getNativeSize(modelId);
         }
 
         // 画质切换时更新提示
@@ -8708,6 +9214,11 @@ ${keywordsList}
         }
 
         function selectImageGenRatio(btn) {
+            // Pollinations 模型不接收尺寸参数，按钮已置灰，忽略点击
+            const rawModel = document.getElementById('imageGenModel')?.value || '';
+            const { provider } = parseModelValue(rawModel);
+            if (provider === 'pollinations') return;
+            
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const ratio = btn.dataset.ratio;
@@ -8754,6 +9265,11 @@ ${keywordsList}
         }
 
         function selectSmartSize(btn) {
+            // Pollinations 模型不接收尺寸，智能按钮已置灰
+            const rawModel = document.getElementById('imageGenModel')?.value || '';
+            const { provider } = parseModelValue(rawModel);
+            if (provider === 'pollinations') return;
+            
             document.querySelectorAll('#imageGenRatioRow .ratio-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             _imageGenUserSetSize = true; // 智能模式也算用户手动选定
@@ -8965,27 +9481,33 @@ ${keywordsList}
                 console.error(`[ImageGen] ${providerName} 失败:`, e);
                 let msg = e.message || String(e);
 
-                // 模型层级错误 — 自动切换并重试一次
-                const isModelError = msg.startsWith('[模型]') || msg.startsWith('[额度]');
-                if (isModelError && !_imageGenRetried) {
-                    _imageGenRetried = true;
-                    showToast(`🔄 ${providerName}:${modelId} 失败，自动切换模型重试...`, 'warning');
-                    autoSwitchToAvailableModel();
-                    // 短暂延迟后重试
-                    await new Promise(r => setTimeout(r, 1000));
-                    try {
+
+
+                // 判断是否可自动重试（换模型）
+                const isRetryable = msg.startsWith('[额度]') || msg.startsWith('[模型]') ||
+                    (msg.startsWith('[HTTP') && (msg.includes('500') || msg.includes('502') || msg.includes('503')));
+
+                // 自动 fallback：当前模型挂了，找下一个可用的
+                if (isRetryable && !_imageGenFallbackInProgress) {
+                    const allActive = ModelRegistry.getActive();
+                    const fallback = allActive.find(m => m.id !== modelId && m.id !== _imageGenLastFailedModel);
+                    if (fallback) {
+                        _imageGenFallbackInProgress = true;
+                        _imageGenLastFailedModel = modelId;
                         _isImageGenRunning = false;
                         btn.disabled = false;
                         btn.textContent = '🎨 生成图片';
                         loading.style.display = 'none';
-                        await doImageGen();
-                        _imageGenRetried = false;
+                        renderModelSelect();
+                        showToast('🔄 ' + modelId + ' 不可用，已自动切换到 ' + fallback.name + ' 重试', 'info');
+                        document.getElementById('imageGenModel').value = fallback.provider + ':' + fallback.id;
+                        setTimeout(function() { _imageGenFallbackInProgress = false; _imageGenLastFailedModel = null; doImageGen(); }, 500);
                         return;
-                    } catch (retryErr) {
-                        msg = retryErr.message || String(retryErr);
                     }
-                    _imageGenRetried = false;
                 }
+
+                _imageGenFallbackInProgress = false;
+                _imageGenLastFailedModel = null;
 
                 // 统一前缀分类
                 if (msg.startsWith('[认证]')) {
@@ -8995,13 +9517,16 @@ ${keywordsList}
                 } else if (msg.startsWith('[限流]')) {
                     msg = '⏳ ' + msg.replace('[限流]', '服务拥挤: ') + ' — 请切换到 Puter.js 模型';
                 } else if (msg.startsWith('[额度]')) {
-                    msg = '💰 ' + msg.replace('[额度]', '额度不足: ') + ' — 请换用其他免费模型';
+                    msg = '💰 ' + msg.replace('[额度]', '额度不足: ') + ' — 已自动切换，如无可请刷新模型库';
                 } else if (msg.startsWith('[模型]')) {
-                    msg = '🤖 ' + msg.replace('[模型]', '模型异常: ') + ' — 请换一个模型重试';
+                    msg = '🤖 ' + msg.replace('[模型]', '模型异常: ') + ' — 已自动切换，如无可请刷新模型库';
                 } else if (msg.startsWith('[CDN]')) {
                     msg = '📦 ' + msg.replace('[CDN]', '加载失败: ') + ' — 请刷新页面重试';
+                } else if (msg.startsWith('[HTTP')) {
+                    msg = '⚠️ ' + msg.replace(/^\[HTTP\s+\d+\]\s*/, '服务异常: ') + ' — 已自动切换，如无可请刷新模型库';
                 }
                 showToast(msg, 'error');
+                renderModelSelect();
                 _isImageGenRunning = false;
                 btn.disabled = false;
                 btn.textContent = '🎨 生成图片';
@@ -9064,6 +9589,7 @@ ${keywordsList}
             await loadImageGenHistory();
             if (idx < 0 || idx >= imageGenHistory.length) return;
             const item = imageGenHistory[idx];
+            const itemId = item.id;
             const overlay = document.createElement('div');
             overlay.className = 'image-gen-preview-overlay';
             overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
@@ -9075,18 +9601,42 @@ ${keywordsList}
                         <p>${escapeHtml(item.prompt)}</p>
                         <small>${item.reqRatio ? `<span style="color:#86efac;">请求 ${item.reqRatio} → 实际 </span>` : item.reqWidth && item.reqHeight && (item.reqWidth !== item.width || item.reqHeight !== item.height) ? `<span style="color:#86efac;">请求 ${item.reqWidth}×${item.reqHeight} → 实际 </span>` : ''}${item.width}×${item.height} · ${formatModelDisplay(item.model || '', item.modelId || '')} · seed:${item.seed}${item.quality ? ` · ${item.quality==='high'?'💎 高品质':item.quality==='standard'?'🎯 标准':'⚡ 快速'}` : ''}</small>
                         <div style="margin-top:0.65rem;display:flex;gap:0.5rem;justify-content:center;">
-                            <button class="btn btn-ghost btn-sm" onclick="downloadImageGenItem(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">⬇ 下载</button>
-                            <button class="btn btn-ghost btn-sm" onclick="copyImageGenPrompt(${idx})" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">📋 复制提示词</button>
-                            <button class="btn btn-ghost btn-sm" onclick="deleteImageGenItem(${idx}); this.closest('.image-gen-preview-overlay').remove();" style="color:#ef4444;border-color:rgba(239,68,68,0.3);">🗑 删除</button>
+                            <button class="btn btn-ghost btn-sm preview-action-btn" data-action="download" data-id="${itemId}" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">⬇ 下载</button>
+                            <button class="btn btn-ghost btn-sm preview-action-btn" data-action="copy" data-id="${itemId}" style="color:#d1d5db;border-color:rgba(255,255,255,0.2);">📋 复制提示词</button>
+                            <button class="btn btn-ghost btn-sm preview-action-btn" data-action="delete" data-id="${itemId}" style="color:#ef4444;border-color:rgba(239,68,68,0.3);">🗑 删除</button>
                         </div>
                     </div>
                 </div>`;
+            // 使用事件委托处理预览操作按钮，避免 async 时序问题
+            overlay.querySelectorAll('.preview-action-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    const id = parseInt(btn.dataset.id);
+                    const itemIdx = imageGenHistory.findIndex(h => h.id === id);
+                    if (itemIdx < 0) {
+                        showToast('该记录已不存在', 'warning');
+                        return;
+                    }
+                    if (action === 'download') {
+                        downloadImageGenItem(itemIdx);
+                    } else if (action === 'copy') {
+                        await copyImageGenPrompt(itemIdx);
+                    } else if (action === 'delete') {
+                        await deleteImageGenItem(itemIdx);
+                        overlay.remove();
+                    }
+                });
+            });
             document.body.appendChild(overlay);
         }
 
         async function downloadImageGenItem(idx) {
-            await loadImageGenHistory();
-            if (idx < 0 || idx >= imageGenHistory.length) return;
+            // 同步读取内存数据
+            if (idx < 0 || idx >= imageGenHistory.length) {
+                showToast('该记录已失效，请刷新列表', 'warning');
+                return;
+            }
             const item = imageGenHistory[idx];
             const a = document.createElement('a');
             a.href = item.base64;
@@ -9095,9 +9645,16 @@ ${keywordsList}
         }
 
         async function copyImageGenPrompt(idx) {
-            await loadImageGenHistory();
-            if (idx < 0 || idx >= imageGenHistory.length) return;
+            // 同步读取内存数据，避免 await 后丢失用户手势（clipboard API 需要瞬态激活）
+            if (idx < 0 || idx >= imageGenHistory.length) {
+                await loadImageGenHistory();
+                if (idx < 0 || idx >= imageGenHistory.length) {
+                    showToast('该记录已失效，请刷新列表', 'warning');
+                    return;
+                }
+            }
             const item = imageGenHistory[idx];
+            // clipboard API 严格要求在用户手势回调中同步调用
             navigator.clipboard.writeText(item.prompt).then(() => {
                 showToast('提示词已复制 ✓', 'success');
             }).catch(() => {
@@ -9106,16 +9663,21 @@ ${keywordsList}
         }
 
         async function deleteImageGenItem(idx) {
-            await loadImageGenHistory();
-            if (idx < 0 || idx >= imageGenHistory.length) return;
+            // 同步读取内存数据 + confirm（必须在 await 之前，保留用户手势上下文）
+            if (idx < 0 || idx >= imageGenHistory.length) {
+                showToast('该记录已失效，请刷新列表', 'warning');
+                return;
+            }
             const item = imageGenHistory[idx];
+            const itemId = item.id;
             if (!confirm(`确定要删除这条生成记录吗？\n\n${item.prompt.substring(0, 100)}`)) return;
-            imageGenHistory.splice(idx, 1);
+            // 已确认 → 执行异步操作
+            imageGenHistory = imageGenHistory.filter(h => h.id !== itemId);
             try {
                 const db = await _openImageGenDB();
                 const tx = db.transaction('imageGenHistory', 'readwrite');
                 const store = tx.objectStore('imageGenHistory');
-                store.delete(item.id);
+                store.delete(itemId);
                 await new Promise(r => { tx.oncomplete = r; });
             } catch (e) {
                 console.warn('[ImageGenDB] 删除失败:', e);
@@ -9126,6 +9688,9 @@ ${keywordsList}
 
         async function clearImageGenHistory() {
             if (!confirm('确定要清空所有生成记录吗？')) return;
+            // 关闭可能正在显示的预览 overlay
+            const existingOverlay = document.querySelector('.image-gen-preview-overlay');
+            if (existingOverlay) existingOverlay.remove();
             imageGenHistory = [];
             try {
                 const db = await _openImageGenDB();

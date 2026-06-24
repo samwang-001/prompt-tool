@@ -145,6 +145,45 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // 代理：/api/pollinations-models -> 获取 Pollinations 可用模型列表
+  if (parsed.pathname === '/api/pollinations-models') {
+    const upstreamUrl = 'https://image.pollinations.ai/models';
+    const proxyReq = https.get(upstreamUrl, { timeout: 15000 }, (proxyRes) => {
+      let data = '';
+      proxyRes.on('data', chunk => { data += chunk; });
+      proxyRes.on('end', () => {
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+          'Cache-Control': 'no-store',
+        });
+        res.end(data);
+      });
+    });
+    proxyReq.on('timeout', () => { proxyReq.destroy(); res.writeHead(504, {}); res.end(JSON.stringify({ error: '超时' })); });
+    proxyReq.on('error', () => { if (!res.headersSent) { res.writeHead(502, {}); res.end(JSON.stringify({ error: '不可达' })); } });
+    return;
+  }
+
+  // 代理：/api/probe-model?model=xxx -> 探测单个模型是否可用（返回状态码）
+  if (parsed.pathname === '/api/probe-model') {
+    const model = parsed.query.model || 'flux';
+    const probeUrl = `https://image.pollinations.ai/prompt/test?model=${model}&width=64&height=64&seed=1&nologo=true`;
+    const probeReq = https.get(probeUrl, { timeout: 10000 }, (proxyRes) => {
+      const ok = proxyRes.statusCode >= 200 && proxyRes.statusCode < 400;
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+      });
+      res.end(JSON.stringify({ model, available: ok, status: proxyRes.statusCode }));
+      // 吃掉响应体避免内存泄露
+      proxyRes.resume();
+    });
+    probeReq.on('timeout', () => { probeReq.destroy(); if (!res.headersSent) { res.writeHead(200, {}); res.end(JSON.stringify({ model, available: false, error: 'timeout' })); } });
+    probeReq.on('error', () => { if (!res.headersSent) { res.writeHead(200, {}); res.end(JSON.stringify({ model, available: false, error: 'connection' })); } });
+    return;
+  }
+
   // 代理：/api/pollinations -> Pollinations API (绕过浏览器 Origin 头 403)
   if (parsed.pathname === '/api/pollinations') {
     const q = parsed.query;
@@ -193,6 +232,64 @@ const server = http.createServer((req, res) => {
       if (!res.headersSent) {
         res.writeHead(502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Pollinations 服务不可达' }));
+      }
+    });
+
+    return;
+  }
+
+  // 代理：/api/proxy-image?url=... -> 绕过浏览器 CORS 下载第三方图片
+  if (parsed.pathname === '/api/proxy-image') {
+    const targetUrl = parsed.query.url;
+    if (!targetUrl) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: '缺少 url 参数' }));
+      return;
+    }
+
+    // 安全校验：只允许 http/https 协议
+    let parsedTarget;
+    try {
+      parsedTarget = new URL(targetUrl);
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: '无效的 URL' }));
+      return;
+    }
+    if (!['http:', 'https:'].includes(parsedTarget.protocol)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: '仅支持 http/https 协议' }));
+      return;
+    }
+
+    const httpModule = parsedTarget.protocol === 'https:' ? https : http;
+    const proxyReq = httpModule.get(targetUrl, { timeout: 30000 }, (proxyRes) => {
+      if (proxyRes.statusCode >= 400) {
+        res.writeHead(proxyRes.statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `图片下载失败 HTTP ${proxyRes.statusCode}` }));
+        return;
+      }
+      const ct = proxyRes.headers['content-type'] || 'image/jpeg';
+      res.writeHead(200, {
+        'Content-Type': ct,
+        'Cache-Control': 'no-store',
+      });
+      proxyRes.pipe(res);
+    });
+
+    proxyReq.on('timeout', () => {
+      proxyReq.destroy();
+      if (!res.headersSent) {
+        res.writeHead(504, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: '图片下载超时' }));
+      }
+    });
+
+    proxyReq.on('error', (err) => {
+      console.error('[ProxyImage] 代理错误:', err.message);
+      if (!res.headersSent) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: '图片服务不可达' }));
       }
     });
 

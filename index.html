@@ -33,6 +33,7 @@
                 <button class="nav-tab active" data-view="compose" onclick="switchView('compose')">词汇组合</button>
                 <button class="nav-tab" data-view="image-prompt" onclick="switchView('image-prompt')">图片反推</button>
                 <button class="nav-tab" data-view="image-gen" onclick="switchView('image-gen')">图片生成</button>
+                <button class="nav-tab" data-view="model-registry" onclick="switchView('model-registry')">模型库</button>
             </div>
             <div class="header-actions">
                 <!-- 未登录时显示登录按钮 -->
@@ -263,6 +264,7 @@
                         <div class="title-layout-section-label">细节配置</div>
                         <div id="titleLayoutOptions" class="title-layout-options"></div>
                         <div id="titleLayoutOptions2" class="title-layout-options" style="margin-top:0.35rem;"></div>
+                        <div id="titleLayoutOptions3" class="title-layout-options" style="margin-top:0.35rem;"></div>
                         <div class="title-layout-toggle">
                             <input type="checkbox" id="titleLayoutEnabled" onchange="toggleTitleLayout()" checked>
                             <label for="titleLayoutEnabled">在提示词中包含排版指令</label>
@@ -429,48 +431,7 @@
                                 <div style="flex:1;">
                                     <label style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.25rem;display:block;">模型</label>
                                     <select id="imageGenModel" class="mini-select model-select">
-                                        <optgroup label="📡 Pollinations (免费·限流)">
-                                            <option value="pollinations::flux" selected>Flux Schnell — 默认推荐</option>
-                                            <option value="pollinations::zimage">Z-Image Turbo — 极速生成</option>
-                                            <option value="pollinations::seedream">Seedream 4.0 — 创意风格</option>
-                                            <option value="pollinations::klein">FLUX.2 Klein 4B — 最新轻量</option>
-                                            <option value="pollinations::qwen-image">Qwen Image Plus — 通义千问</option>
-                                            <option value="pollinations::grok-imagine">Grok Imagine — xAI 出品</option>
-                                            <option value="pollinations::ideogram-v4-turbo">Ideogram 4.0 Turbo — 文字渲染</option>
-                                            <option value="pollinations::nanobanana">NanoBanana — 轻量免费</option>
-                                            <option value="pollinations::nanobanana-pro">NanoBanana Pro — 增强免费</option>
-                                        </optgroup>
-                                        <optgroup label="☁️ Puter.js — OpenAI">
-                                            <option value="puter::gpt-image-2">GPT Image 2 — 最新 [❌ 额度已耗尽]</option>
-                                            <option value="puter::gpt-image-1.5">GPT Image 1.5 — 推荐 [❌ 额度已耗尽]</option>
-                                            <option value="puter::gpt-image-1">GPT Image 1 — 经典 [❌ 额度已耗尽]</option>
-                                            <option value="puter::gpt-image-1-mini">GPT Image 1 Mini — 极速 [❌ 额度已耗尽]</option>
-                                            <option value="puter::dall-e-3">DALL·E 3 — 经典</option>
-                                            <option value="puter::dall-e-2">DALL·E 2 — 轻量</option>
-                                        </optgroup>
-                                        <optgroup label="☁️ Puter.js — Google">
-                                            <option value="puter::gemini-3.1-flash-image-preview">Gemini 3.1 Flash — 最新</option>
-                                            <option value="puter::gemini-3-pro-image-preview">Gemini 3 Pro — 顶级</option>
-                                            <option value="puter::gemini-2.5-flash-image-preview">Gemini 2.5 Flash — 稳定</option>
-                                            <option value="puter::google/flash-image-2.5">Flash Image 2.5 — 极速</option>
-                                            <option value="puter::google/imagen-4.0-fast">Imagen 4.0 Fast — 极速</option>
-                                            <option value="puter::google/imagen-4.0-preview">Imagen 4.0 Preview</option>
-                                            <option value="puter::google/imagen-4.0-ultra">Imagen 4.0 Ultra — 顶级</option>
-                                        </optgroup>
-                                        <optgroup label="☁️ Puter.js — Flux 系列">
-                                            <option value="puter::black-forest-labs/flux-schnell">Flux Schnell — 4步极速</option>
-                                            <option value="puter::black-forest-labs/flux-1.1-pro">Flux 1.1 Pro — 高质量</option>
-                                        </optgroup>
-                                        <optgroup label="☁️ Puter.js — Stable Diffusion">
-                                            <option value="puter::stabilityai/stable-diffusion-xl-base-1.0">SDXL — 经典</option>
-                                        </optgroup>
-                                        <optgroup label="☁️ Puter.js — 其他优质模型">
-                                            <option value="puter::ideogram/ideogram-3.0">Ideogram 3.0 — 文字渲染</option>
-                                            <option value="puter::Lykon/DreamShaper">DreamShaper — 艺术风格</option>
-                                            <option value="puter::Qwen/Qwen-Image">Qwen Image — 阿里通义</option>
-                                            <option value="puter::ByteDance-Seed/Seedream-4.0">Seedream 4.0 — 字节最新</option>
-                                            <option value="puter::HiDream-ai/HiDream-I1-Full">HiDream I1 Full — 全参数</option>
-                                        </optgroup>
+                                        <!-- 动态生成，由 ModelRegistry 驱动 -->
                                     </select>
                                 </div>
                                 <div style="flex:1;">
@@ -528,6 +489,67 @@
                 </div>
             </div>
         </div><!-- /viewImageGen -->
+
+        <!-- ==================== 视图：模型库 ==================== -->
+        <div class="view-container" id="viewModelRegistry">
+            <div class="model-registry-layout">
+                <!-- 顶部：统计与筛选 -->
+                <div class="model-registry-toolbar">
+                    <div class="mr-toolbar-left">
+                        <span class="mr-stat" id="mrStatAll">总共 <strong id="mrCountAll">0</strong> 个模型</span>
+                        <span class="mr-stat mr-stat-active" id="mrStatActive">🟢 可用 <strong id="mrCountActive">0</strong></span>
+                        <span class="mr-stat mr-stat-exhausted" id="mrStatExhausted">🟡 耗尽 <strong id="mrCountExhausted">0</strong></span>
+                        <span class="mr-stat mr-stat-offline" id="mrStatOffline">🔴 下线 <strong id="mrCountOffline">0</strong></span>
+                        <button class="btn btn-accent btn-sm" id="mrRefreshBtn" onclick="refreshModelRegistry()" title="联网查询最新模型，自动添加新模型、清除已下架模型">🔄 刷新模型库</button>
+                    </div>
+                    <div class="mr-toolbar-right">
+                        <select id="mrFilterStatus" class="mr-filter" onchange="renderModelRegistryView()">
+                            <option value="all">全部状态</option>
+                            <option value="active">仅可用</option>
+                            <option value="exhausted">仅耗尽</option>
+                            <option value="offline">仅下线</option>
+                            <option value="deleted">仅已删除</option>
+                        </select>
+                        <select id="mrFilterProvider" class="mr-filter" onchange="renderModelRegistryView()">
+                            <option value="all">全部提供方</option>
+                            <option value="pollinations">Pollinations</option>
+                            <option value="puter">Puter.js</option>
+                        </select>
+                        <select id="mrFilterGroup" class="mr-filter" onchange="renderModelRegistryView()">
+                            <option value="all">全部分组</option>
+                        </select>
+                        <input type="text" id="mrSearch" class="mr-search" placeholder="搜索模型名称..." oninput="renderModelRegistryView()">
+                    </div>
+                </div>
+
+                <!-- 官方平台快捷入口 -->
+                <div class="mr-websites-section" id="mrWebsitesSection">
+                    <div class="mr-section-label">🔗 模型官方平台</div>
+                    <div class="mr-websites-grid" id="mrWebsitesGrid"></div>
+                </div>
+
+                <!-- 模型列表 -->
+                <div class="mr-table-wrap">
+                    <table class="mr-table">
+                        <thead>
+                            <tr>
+                                <th class="mr-th-name">模型名称</th>
+                                <th class="mr-th-group">分组 / 提供方</th>
+                                <th class="mr-th-status">状态</th>
+                                <th class="mr-th-res">最大分辨率</th>
+                                <th class="mr-th-pricing">收费</th>
+                                <th class="mr-th-region">地区</th>
+                                <th class="mr-th-constraints">约束</th>
+                                <th class="mr-th-actions">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mrTableBody">
+                            <tr><td colspan="8" class="mr-empty">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div><!-- /viewModelRegistry -->
     </main>
 
     <!-- Formula Modal -->
@@ -684,6 +706,27 @@
         </div>
     </div>
 
+    <!-- Model Refresh Modal — 刷新模型库进度 -->
+    <div class="modal-overlay" id="modelRefreshModal">
+        <div class="modal" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modelRefreshTitle">🔄 刷新模型库</h3>
+                <div class="modal-close" id="modelRefreshClose" onclick="closeModelRefreshModal()">✕</div>
+            </div>
+            <div class="modal-body" id="modelRefreshBody">
+                <div id="mrRefreshProgress" class="mr-refresh-progress">
+                    <div class="mr-refresh-spinner"></div>
+                    <p class="mr-refresh-phase" id="mrRefreshPhase">正在连接...</p>
+                    <p class="mr-refresh-detail" id="mrRefreshDetail"></p>
+                </div>
+                <div id="mrRefreshResult" class="mr-refresh-result" style="display:none;"></div>
+            </div>
+            <div class="modal-footer" id="modelRefreshFooter">
+                <button class="btn btn-secondary" id="mrRefreshCancelBtn" onclick="closeModelRefreshModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import Modal -->
     <div class="modal-overlay" id="importModal">
         <div class="modal">
@@ -802,6 +845,7 @@
     <script src="image-lazyload.js"></script>
     <script src="shortcuts.js"></script>
     <script async src="https://js.puter.com/v2/" onerror="console.warn('[Puter.js] SDK 加载失败，Puter.js 模型组将不可用');window.__puterDisabled=true;"></script>
+    <script src="model-registry.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
