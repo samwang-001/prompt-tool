@@ -281,6 +281,9 @@
                     <div class="panel-header" onclick="toggleFormulaPanel()">
                         <h2 class="panel-title">公式管理</h2>
                         <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); deduplicateFormulas()" title="检测并清除重复公式">
+                                🔍 重复自检
+                            </button>
                             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openVersionHistory()" title="查看公式版本记录">
                                 版本记录
                             </button>

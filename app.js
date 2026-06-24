@@ -1536,6 +1536,65 @@
             renderCategories();
         }
 
+        function deduplicateFormulas() {
+            const formulas = getFormulas();
+            if (formulas.length === 0) {
+                showToast('没有公式可供检查', 'info');
+                return;
+            }
+
+            // 按名称（忽略大小写）分组
+            const nameGroups = new Map();
+            formulas.forEach(f => {
+                const key = (f.name || '').toLowerCase().trim();
+                if (!nameGroups.has(key)) nameGroups.set(key, []);
+                nameGroups.get(key).push(f);
+            });
+
+            // 找出重复组（同一名称有多个公式）
+            const duplicateGroups = [];
+            nameGroups.forEach((group, name) => {
+                if (group.length > 1) duplicateGroups.push({ name, group });
+            });
+
+            if (duplicateGroups.length === 0) {
+                showToast('未发现重复公式 ✓', 'success');
+                return;
+            }
+
+            // 构建确认消息
+            let details = duplicateGroups.map(d => {
+                const names = d.group.map(f => `"${f.name}"`);
+                return `· ${names.join('、')}`;
+            }).join('\n');
+            const totalDuplicates = duplicateGroups.reduce((sum, d) => sum + d.group.length - 1, 0);
+
+            const confirmed = confirm(
+                `发现 ${duplicateGroups.length} 组重复公式，共 ${totalDuplicates} 个可清除：\n\n${details}\n\n每组保留最新修改的版本，其余删除。确认执行？`
+            );
+            if (!confirmed) return;
+
+            // 执行去重：每组保留 updatedAt 最新的，相同时间则保留 id 最小的
+            const keepIds = new Set();
+            nameGroups.forEach(group => {
+                group.sort((a, b) => {
+                    const ta = a.updatedAt || a.createdAt || 0;
+                    const tb = b.updatedAt || b.createdAt || 0;
+                    if (tb !== ta) return tb - ta;  // 最新的排前面
+                    return (a.id || '').localeCompare(b.id || '');  // 相同时间按 id
+                });
+                keepIds.add(group[0].id);
+            });
+
+            const deduplicated = formulas.filter(f => keepIds.has(f.id));
+            const removed = formulas.length - deduplicated.length;
+            saveFormulas(deduplicated);
+            renderFormulas();
+            updateFormulaSelect();
+
+            showToast(`已清除 ${removed} 个重复公式，保留 ${deduplicated.length} 个`, 'success');
+        }
+
         function deleteFormula(id) {
             if (!confirm('确定要删除这个公式吗？')) return;
 
